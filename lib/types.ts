@@ -33,6 +33,7 @@ export interface PortState {
   name: string;
   lat: number;
   lon: number;
+  reliability?: 'high' | 'medium' | 'low';
   score: number;
   level: CongestionLevel;
   ddRate: number;
@@ -43,7 +44,9 @@ export interface PortState {
   underway: number;
   inbound: number;
   totalVessels: number;
+  commercialVessels?: number;
   vessels: VesselRecord[];
+  containerRates?: ContainerRate[];
   forecast: number[];
   lastUpdated: string;
 }
@@ -67,4 +70,16 @@ export interface DDRate {
   multiplier: number;
   level: CongestionLevel;
   color: string;
+}
+
+export interface ContainerRate {
+  id: string;
+  label: string;
+  abbr: string;
+  teu: number;
+  baseDay: number;
+  daily: number;
+  weekly: number;
+  monthly: number;
+  upliftPct: number;
 }
