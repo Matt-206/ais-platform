@@ -24,7 +24,7 @@ async function collectFocused(
 ): Promise<{ messages: string[]; error?: string }> {
   return new Promise((resolve) => {
     const rawData: Array<string | ArrayBuffer | Blob> = [];
-    let ws: WebSocket | null = null;
+    let ws: InstanceType<typeof import('undici').WebSocket> | null = null;
     let settled = false;
 
     const done = async (error?: string) => {
@@ -35,47 +35,51 @@ async function collectFocused(
       resolve({ messages, error });
     };
 
-    const timer = setTimeout(() => done(), durationMs);
+    const timer = setTimeout(() => void done(), durationMs);
 
-    try {
-      ws = new WebSocket(AIS_ENDPOINT);
+    (async () => {
+      try {
+        const { WebSocket: UndiciWS } = await import('undici');
+        ws = new UndiciWS(AIS_ENDPOINT);
 
-      ws.addEventListener('open', () => {
-        ws!.send(JSON.stringify({
-          APIKey: AIS_API_KEY,
-          BoundingBoxes: [[[
-            port.outer.lat[0], port.outer.lon[0]
-          ], [
-            port.outer.lat[1], port.outer.lon[1]
-          ]]],
-          FilterMessageTypes: [
-            'PositionReport',
-            'ShipStaticData',
-            'StandardClassBPositionReport',
-            'ExtendedClassBPositionReport',
-            'StaticDataReport',
-          ],
-        }));
-      });
+        ws.addEventListener('open', () => {
+          ws!.send(JSON.stringify({
+            APIKey: AIS_API_KEY,
+            BoundingBoxes: [[[
+              port.outer.lat[0], port.outer.lon[0]
+            ], [
+              port.outer.lat[1], port.outer.lon[1]
+            ]]],
+            FilterMessageTypes: [
+              'PositionReport',
+              'ShipStaticData',
+              'StandardClassBPositionReport',
+              'ExtendedClassBPositionReport',
+              'StaticDataReport',
+            ],
+          }));
+        });
 
-      ws.addEventListener('message', (event: MessageEvent) => {
-        rawData.push(event.data as string | ArrayBuffer | Blob);
-      });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ws.addEventListener('message', (event: any) => {
+          rawData.push(event.data as string | ArrayBuffer | Blob);
+        });
 
-      ws.addEventListener('error', (event) => {
+        ws.addEventListener('error', (event) => {
+          clearTimeout(timer);
+          void done((event as ErrorEvent).message ?? 'WebSocket error');
+        });
+
+        ws.addEventListener('close', () => {
+          clearTimeout(timer);
+          void done();
+        });
+
+      } catch (err) {
         clearTimeout(timer);
-        void done((event as ErrorEvent).message ?? 'WebSocket error');
-      });
-
-      ws.addEventListener('close', () => {
-        clearTimeout(timer);
-        void done();
-      });
-
-    } catch (err) {
-      clearTimeout(timer);
-      void done(String(err));
-    }
+        void done(String(err));
+      }
+    })();
   });
 }
 

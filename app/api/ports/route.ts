@@ -14,64 +14,66 @@ const AIS_ENDPOINT = 'wss://stream.aisstream.io/v0/stream';
 async function toText(data: string | ArrayBuffer | Blob): Promise<string> {
   if (typeof data === 'string') return data;
   if (data instanceof ArrayBuffer) return new TextDecoder().decode(data);
-  return (data as Blob).text(); // native WebSocket sends Blobs by default
+  return (data as Blob).text();
 }
 
 async function collectAISData(durationMs: number): Promise<{ messages: string[]; error?: string }> {
   return new Promise((resolve) => {
-    // Store raw data synchronously — convert async only after timer fires
     const rawData: Array<string | ArrayBuffer | Blob> = [];
-    let ws: WebSocket | null = null;
+    let ws: InstanceType<typeof import('undici').WebSocket> | null = null;
     let settled = false;
 
     const done = async (error?: string) => {
       if (settled) return;
       settled = true;
       if (ws) { try { ws.close(); } catch { /* ignore */ } ws = null; }
-      // Convert all collected blobs/buffers to strings
       const messages = await Promise.all(rawData.map(toText));
       resolve({ messages, error });
     };
 
-    const timer = setTimeout(() => done(), durationMs);
+    const timer = setTimeout(() => void done(), durationMs);
 
-    try {
-      ws = new WebSocket(AIS_ENDPOINT);
+    (async () => {
+      try {
+        // Use undici WebSocket — works on Node.js 18/20/22 (all Vercel runtimes)
+        const { WebSocket: UndiciWS } = await import('undici');
+        ws = new UndiciWS(AIS_ENDPOINT);
 
-      ws.addEventListener('open', () => {
-        ws!.send(JSON.stringify({
-          APIKey: AIS_API_KEY,
-          BoundingBoxes: [[[-90, -180], [90, 180]]],
-          FilterMessageTypes: [
-            'PositionReport',
-            'ShipStaticData',
-            'StandardClassBPositionReport',
-            'ExtendedClassBPositionReport',
-            'StaticDataReport',
-            'LongRangeAisBroadcastMessage',
-          ],
-        }));
-      });
+        ws.addEventListener('open', () => {
+          ws!.send(JSON.stringify({
+            APIKey: AIS_API_KEY,
+            BoundingBoxes: [[[-90, -180], [90, 180]]],
+            FilterMessageTypes: [
+              'PositionReport',
+              'ShipStaticData',
+              'StandardClassBPositionReport',
+              'ExtendedClassBPositionReport',
+              'StaticDataReport',
+              'LongRangeAisBroadcastMessage',
+            ],
+          }));
+        });
 
-      // Collect synchronously — no async in event handler
-      ws.addEventListener('message', (event: MessageEvent) => {
-        rawData.push(event.data as string | ArrayBuffer | Blob);
-      });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ws.addEventListener('message', (event: any) => {
+          rawData.push(event.data as string | ArrayBuffer | Blob);
+        });
 
-      ws.addEventListener('error', (event) => {
+        ws.addEventListener('error', (event) => {
+          clearTimeout(timer);
+          void done((event as ErrorEvent).message ?? 'WebSocket error');
+        });
+
+        ws.addEventListener('close', () => {
+          clearTimeout(timer);
+          void done();
+        });
+
+      } catch (err) {
         clearTimeout(timer);
-        void done((event as ErrorEvent).message ?? 'WebSocket error');
-      });
-
-      ws.addEventListener('close', () => {
-        clearTimeout(timer);
-        void done();
-      });
-
-    } catch (err) {
-      clearTimeout(timer);
-      void done(String(err));
-    }
+        void done(String(err));
+      }
+    })();
   });
 }
 
@@ -82,9 +84,7 @@ export async function GET() {
 
     if (liveStreamWorking) {
       const processor = new AISProcessor();
-      for (const msg of messages) {
-        processor.processMessage(msg);
-      }
+      for (const msg of messages) processor.processMessage(msg);
       const ports = processor.getPortStates();
 
       return NextResponse.json({
@@ -96,7 +96,6 @@ export async function GET() {
       }, { headers: { 'Cache-Control': 'no-store' } });
     }
 
-    // Fallback: pre-processed CSV snapshot
     const seed = seedData as { ports: PortState[]; messageCount: number; timestamp: string };
     const now = new Date().toISOString();
     const ports = seed.ports.map(p => ({ ...p, lastUpdated: now }));
