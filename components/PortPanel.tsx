@@ -10,6 +10,7 @@ import { classifyNavStatus } from '@/lib/congestion';
 import MetricCard from './MetricCard';
 import ForecastChart from './ForecastChart';
 import DDContainerTable from './DDContainerTable';
+import DDScenarioCalculator from './DDScenarioCalculator';
 
 interface PortPanelProps {
   portName: string | null;
@@ -219,6 +220,15 @@ export default function PortPanel({ portName, initialData, onClose }: PortPanelP
               multiplier={data.ddMultiplier}
             />
           )}
+
+          {/* ── D&D Liability Scenario Calculator ── */}
+          <DDScenarioCalculator
+            portName={data.name}
+            score={data.score}
+            level={data.level}
+            color={data.color}
+            multiplier={data.ddMultiplier}
+          />
 
           {/* Vessel Metrics */}
           <div className="grid grid-cols-2 gap-3">
