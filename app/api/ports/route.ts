@@ -1,27 +1,30 @@
 import { NextResponse } from 'next/server';
 import { AISProcessor } from '@/lib/ais-processor';
+import seedData from '@/lib/seed-data.json';
+import type { PortState } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 15; // seconds — collect AIS data then respond
+export const maxDuration = 15;
 
-const COLLECTION_MS = 7000; // 7 seconds of data collection
+const COLLECTION_MS = 7000;
+const MIN_USEFUL_MESSAGES = 50; // below this → live stream is throttled
 const AIS_API_KEY = process.env.AISSTREAM_API_KEY ?? '36484c5f046482be74ba63c44bf71bf8269a328f';
 const AIS_ENDPOINT = 'wss://stream.aisstream.io/v0/stream';
 
-async function collectAISData(durationMs: number): Promise<string[]> {
+async function collectAISData(durationMs: number): Promise<{ messages: string[]; error?: string }> {
   return new Promise((resolve) => {
     const messages: string[] = [];
     let ws: import('ws').WebSocket | null = null;
 
-    const done = () => {
+    const done = (error?: string) => {
       if (ws) {
         try { ws.close(); } catch { /* ignore */ }
         ws = null;
       }
-      resolve(messages);
+      resolve({ messages, error });
     };
 
-    const timer = setTimeout(done, durationMs);
+    const timer = setTimeout(() => done(), durationMs);
 
     (async () => {
       try {
@@ -47,18 +50,18 @@ async function collectAISData(durationMs: number): Promise<string[]> {
           messages.push(data.toString());
         });
 
-        ws.on('error', () => {
+        ws.on('error', (err) => {
           clearTimeout(timer);
-          done();
+          done(err.message);
         });
 
         ws.on('close', () => {
           clearTimeout(timer);
-          resolve(messages);
+          resolve({ messages });
         });
-      } catch {
+      } catch (err) {
         clearTimeout(timer);
-        resolve(messages);
+        resolve({ messages, error: String(err) });
       }
     })();
   });
@@ -66,26 +69,47 @@ async function collectAISData(durationMs: number): Promise<string[]> {
 
 export async function GET() {
   try {
-    const processor = new AISProcessor();
-    const rawMessages = await collectAISData(COLLECTION_MS);
+    const { messages, error } = await collectAISData(COLLECTION_MS);
+    const liveStreamWorking = messages.length >= MIN_USEFUL_MESSAGES;
 
-    for (const msg of rawMessages) {
-      processor.processMessage(msg);
+    if (liveStreamWorking) {
+      // Full live path — process real-time AIS data
+      const processor = new AISProcessor();
+      for (const msg of messages) {
+        processor.processMessage(msg);
+      }
+      const ports = processor.getPortStates();
+
+      return NextResponse.json({
+        ports,
+        messageCount: messages.length,
+        collectionMs: COLLECTION_MS,
+        timestamp: new Date().toISOString(),
+        source: 'live',
+      }, { headers: { 'Cache-Control': 'no-store' } });
     }
 
-    const portStates = processor.getPortStates();
+    // Fallback: serve pre-processed CSV snapshot data
+    // This happens when the AISstream API key is already in use (1 connection/key limit)
+    // Fix: generate a new key at https://aisstream.io/apikeys and set AISSTREAM_API_KEY
+    const seed = seedData as { ports: PortState[]; messageCount: number; timestamp: string };
+    const now = new Date().toISOString();
+    const ports = seed.ports.map(p => ({
+      ...p,
+      lastUpdated: now,
+    }));
 
     return NextResponse.json({
-      ports: portStates,
-      messageCount: rawMessages.length,
+      ports,
+      messageCount: messages.length,
       collectionMs: COLLECTION_MS,
-      timestamp: new Date().toISOString(),
-    }, {
-      headers: {
-        'Cache-Control': 'no-store',
-        'Access-Control-Allow-Origin': '*',
-      },
-    });
+      timestamp: now,
+      source: 'csv-snapshot',
+      wsError: error ?? (messages.length < MIN_USEFUL_MESSAGES
+        ? 'Live stream throttled — API key may be in use on another connection. Set a dedicated AISSTREAM_API_KEY for live updates.'
+        : undefined),
+    }, { headers: { 'Cache-Control': 'no-store' } });
+
   } catch (err) {
     console.error('AIS collection error:', err);
     return NextResponse.json(

@@ -23,6 +23,8 @@ interface APIResponse {
   ports: PortState[];
   messageCount: number;
   timestamp: string;
+  source?: 'live' | 'csv-snapshot';
+  wsError?: string;
 }
 
 const REFRESH_INTERVAL_MS = 60_000; // 60 seconds auto-refresh
@@ -32,6 +34,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [messageCount, setMessageCount] = useState(0);
+  const [dataSource, setDataSource] = useState<'live' | 'csv-snapshot' | null>(null);
   const [selectedPort, setSelectedPort] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -50,6 +53,7 @@ export default function HomePage() {
       setPorts(data.ports);
       setLastUpdated(data.timestamp);
       setMessageCount(data.messageCount);
+      setDataSource(data.source ?? 'live');
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
         console.error('Failed to fetch ports:', err);
@@ -104,6 +108,7 @@ export default function HomePage() {
         messageCount={messageCount}
         loading={loading}
         onRefresh={handleRefresh}
+        dataSource={dataSource}
       />
 
       {/* Port score strip */}

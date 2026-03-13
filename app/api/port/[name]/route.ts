@@ -1,28 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AISProcessor } from '@/lib/ais-processor';
 import { getPortByName } from '@/lib/ports-config';
+import seedData from '@/lib/seed-data.json';
+import type { PortState } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 15;
 
 const COLLECTION_MS = 7000;
+const MIN_USEFUL_MESSAGES = 30;
 const AIS_API_KEY = process.env.AISSTREAM_API_KEY ?? '36484c5f046482be74ba63c44bf71bf8269a328f';
 const AIS_ENDPOINT = 'wss://stream.aisstream.io/v0/stream';
 
-async function collectAISData(durationMs: number, port: { inner: { lat: [number,number]; lon: [number,number] }; outer: { lat: [number,number]; lon: [number,number] } }): Promise<string[]> {
+async function collectFocused(
+  durationMs: number,
+  port: { outer: { lat: [number, number]; lon: [number, number] } }
+): Promise<{ messages: string[]; error?: string }> {
   return new Promise((resolve) => {
     const messages: string[] = [];
     let ws: import('ws').WebSocket | null = null;
 
-    const done = () => {
-      if (ws) {
-        try { ws.close(); } catch { /* ignore */ }
-        ws = null;
-      }
-      resolve(messages);
+    const done = (error?: string) => {
+      if (ws) { try { ws.close(); } catch { /* ignore */ } ws = null; }
+      resolve({ messages, error });
     };
 
-    const timer = setTimeout(done, durationMs);
+    const timer = setTimeout(() => done(), durationMs);
 
     (async () => {
       try {
@@ -32,7 +35,6 @@ async function collectAISData(durationMs: number, port: { inner: { lat: [number,
         ws.on('open', () => {
           ws!.send(JSON.stringify({
             APIKey: AIS_API_KEY,
-            // Focused bounding box on the specific port's outer zone only
             BoundingBoxes: [[[
               port.outer.lat[0], port.outer.lon[0]
             ], [
@@ -44,27 +46,16 @@ async function collectAISData(durationMs: number, port: { inner: { lat: [number,
               'StandardClassBPositionReport',
               'ExtendedClassBPositionReport',
               'StaticDataReport',
-              'LongRangeAisBroadcastMessage',
             ],
           }));
         });
 
-        ws.on('message', (data: Buffer) => {
-          messages.push(data.toString());
-        });
-
-        ws.on('error', () => {
-          clearTimeout(timer);
-          done();
-        });
-
-        ws.on('close', () => {
-          clearTimeout(timer);
-          resolve(messages);
-        });
-      } catch {
+        ws.on('message', (data: Buffer) => messages.push(data.toString()));
+        ws.on('error', (err) => { clearTimeout(timer); done(err.message); });
+        ws.on('close', () => { clearTimeout(timer); resolve({ messages }); });
+      } catch (err) {
         clearTimeout(timer);
-        resolve(messages);
+        resolve({ messages, error: String(err) });
       }
     })();
   });
@@ -82,22 +73,33 @@ export async function GET(
   }
 
   try {
-    const processor = new AISProcessor();
-    const rawMessages = await collectAISData(COLLECTION_MS, portConfig);
+    const { messages } = await collectFocused(COLLECTION_MS, portConfig);
+    const liveStreamWorking = messages.length >= MIN_USEFUL_MESSAGES;
 
-    for (const msg of rawMessages) {
-      processor.processMessage(msg);
+    if (liveStreamWorking) {
+      const processor = new AISProcessor();
+      for (const msg of messages) processor.processMessage(msg);
+      const state = processor.getPortState(portConfig.name);
+      if (state) {
+        return NextResponse.json(state, { headers: { 'Cache-Control': 'no-store' } });
+      }
     }
 
-    const state = processor.getPortState(portConfig.name);
+    // Fallback to CSV seed data for this specific port
+    const seed = seedData as { ports: PortState[] };
+    const portState = seed.ports.find(
+      p => p.name.toLowerCase() === portConfig.name.toLowerCase()
+    );
 
-    if (!state) {
+    if (!portState) {
       return NextResponse.json({ error: 'Port state unavailable' }, { status: 500 });
     }
 
-    return NextResponse.json(state, {
-      headers: { 'Cache-Control': 'no-store' },
-    });
+    return NextResponse.json(
+      { ...portState, lastUpdated: new Date().toISOString(), source: 'csv-snapshot' },
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
+
   } catch (err) {
     console.error('Port detail error:', err);
     return NextResponse.json({ error: 'Failed to fetch port data' }, { status: 500 });
