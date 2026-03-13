@@ -8,56 +8,74 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 15;
 
 const COLLECTION_MS = 7000;
-const MIN_USEFUL_MESSAGES = 30;
+const MIN_USEFUL_MESSAGES = 20;
 const AIS_API_KEY = process.env.AISSTREAM_API_KEY ?? '0130da07ed67166aaea0fdec600cf164d85816db';
 const AIS_ENDPOINT = 'wss://stream.aisstream.io/v0/stream';
+
+async function toText(data: string | ArrayBuffer | Blob): Promise<string> {
+  if (typeof data === 'string') return data;
+  if (data instanceof ArrayBuffer) return new TextDecoder().decode(data);
+  return (data as Blob).text();
+}
 
 async function collectFocused(
   durationMs: number,
   port: { outer: { lat: [number, number]; lon: [number, number] } }
 ): Promise<{ messages: string[]; error?: string }> {
   return new Promise((resolve) => {
-    const messages: string[] = [];
-    let ws: import('ws').WebSocket | null = null;
+    const rawData: Array<string | ArrayBuffer | Blob> = [];
+    let ws: WebSocket | null = null;
+    let settled = false;
 
-    const done = (error?: string) => {
+    const done = async (error?: string) => {
+      if (settled) return;
+      settled = true;
       if (ws) { try { ws.close(); } catch { /* ignore */ } ws = null; }
+      const messages = await Promise.all(rawData.map(toText));
       resolve({ messages, error });
     };
 
     const timer = setTimeout(() => done(), durationMs);
 
-    (async () => {
-      try {
-        const { default: WebSocket } = await import('ws');
-        ws = new WebSocket(AIS_ENDPOINT);
+    try {
+      ws = new WebSocket(AIS_ENDPOINT);
 
-        ws.on('open', () => {
-          ws!.send(JSON.stringify({
-            APIKey: AIS_API_KEY,
-            BoundingBoxes: [[[
-              port.outer.lat[0], port.outer.lon[0]
-            ], [
-              port.outer.lat[1], port.outer.lon[1]
-            ]]],
-            FilterMessageTypes: [
-              'PositionReport',
-              'ShipStaticData',
-              'StandardClassBPositionReport',
-              'ExtendedClassBPositionReport',
-              'StaticDataReport',
-            ],
-          }));
-        });
+      ws.addEventListener('open', () => {
+        ws!.send(JSON.stringify({
+          APIKey: AIS_API_KEY,
+          BoundingBoxes: [[[
+            port.outer.lat[0], port.outer.lon[0]
+          ], [
+            port.outer.lat[1], port.outer.lon[1]
+          ]]],
+          FilterMessageTypes: [
+            'PositionReport',
+            'ShipStaticData',
+            'StandardClassBPositionReport',
+            'ExtendedClassBPositionReport',
+            'StaticDataReport',
+          ],
+        }));
+      });
 
-        ws.on('message', (data: Buffer) => messages.push(data.toString()));
-        ws.on('error', (err) => { clearTimeout(timer); done(err.message); });
-        ws.on('close', () => { clearTimeout(timer); resolve({ messages }); });
-      } catch (err) {
+      ws.addEventListener('message', (event: MessageEvent) => {
+        rawData.push(event.data as string | ArrayBuffer | Blob);
+      });
+
+      ws.addEventListener('error', (event) => {
         clearTimeout(timer);
-        resolve({ messages, error: String(err) });
-      }
-    })();
+        void done((event as ErrorEvent).message ?? 'WebSocket error');
+      });
+
+      ws.addEventListener('close', () => {
+        clearTimeout(timer);
+        void done();
+      });
+
+    } catch (err) {
+      clearTimeout(timer);
+      void done(String(err));
+    }
   });
 }
 
@@ -85,7 +103,6 @@ export async function GET(
       }
     }
 
-    // Fallback to CSV seed data for this specific port
     const seed = seedData as { ports: PortState[] };
     const portState = seed.ports.find(
       p => p.name.toLowerCase() === portConfig.name.toLowerCase()

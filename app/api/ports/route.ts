@@ -7,63 +7,71 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 15;
 
 const COLLECTION_MS = 7000;
-const MIN_USEFUL_MESSAGES = 50; // below this → live stream is throttled
+const MIN_USEFUL_MESSAGES = 50;
 const AIS_API_KEY = process.env.AISSTREAM_API_KEY ?? '0130da07ed67166aaea0fdec600cf164d85816db';
 const AIS_ENDPOINT = 'wss://stream.aisstream.io/v0/stream';
 
+async function toText(data: string | ArrayBuffer | Blob): Promise<string> {
+  if (typeof data === 'string') return data;
+  if (data instanceof ArrayBuffer) return new TextDecoder().decode(data);
+  return (data as Blob).text(); // native WebSocket sends Blobs by default
+}
+
 async function collectAISData(durationMs: number): Promise<{ messages: string[]; error?: string }> {
   return new Promise((resolve) => {
-    const messages: string[] = [];
-    let ws: import('ws').WebSocket | null = null;
+    // Store raw data synchronously — convert async only after timer fires
+    const rawData: Array<string | ArrayBuffer | Blob> = [];
+    let ws: WebSocket | null = null;
+    let settled = false;
 
-    const done = (error?: string) => {
-      if (ws) {
-        try { ws.close(); } catch { /* ignore */ }
-        ws = null;
-      }
+    const done = async (error?: string) => {
+      if (settled) return;
+      settled = true;
+      if (ws) { try { ws.close(); } catch { /* ignore */ } ws = null; }
+      // Convert all collected blobs/buffers to strings
+      const messages = await Promise.all(rawData.map(toText));
       resolve({ messages, error });
     };
 
     const timer = setTimeout(() => done(), durationMs);
 
-    (async () => {
-      try {
-        const { default: WebSocket } = await import('ws');
-        ws = new WebSocket(AIS_ENDPOINT);
+    try {
+      ws = new WebSocket(AIS_ENDPOINT);
 
-        ws.on('open', () => {
-          ws!.send(JSON.stringify({
-            APIKey: AIS_API_KEY,
-            BoundingBoxes: [[[-90, -180], [90, 180]]],
-            FilterMessageTypes: [
-              'PositionReport',
-              'ShipStaticData',
-              'StandardClassBPositionReport',
-              'ExtendedClassBPositionReport',
-              'StaticDataReport',
-              'LongRangeAisBroadcastMessage',
-            ],
-          }));
-        });
+      ws.addEventListener('open', () => {
+        ws!.send(JSON.stringify({
+          APIKey: AIS_API_KEY,
+          BoundingBoxes: [[[-90, -180], [90, 180]]],
+          FilterMessageTypes: [
+            'PositionReport',
+            'ShipStaticData',
+            'StandardClassBPositionReport',
+            'ExtendedClassBPositionReport',
+            'StaticDataReport',
+            'LongRangeAisBroadcastMessage',
+          ],
+        }));
+      });
 
-        ws.on('message', (data: Buffer) => {
-          messages.push(data.toString());
-        });
+      // Collect synchronously — no async in event handler
+      ws.addEventListener('message', (event: MessageEvent) => {
+        rawData.push(event.data as string | ArrayBuffer | Blob);
+      });
 
-        ws.on('error', (err) => {
-          clearTimeout(timer);
-          done(err.message);
-        });
-
-        ws.on('close', () => {
-          clearTimeout(timer);
-          resolve({ messages });
-        });
-      } catch (err) {
+      ws.addEventListener('error', (event) => {
         clearTimeout(timer);
-        resolve({ messages, error: String(err) });
-      }
-    })();
+        void done((event as ErrorEvent).message ?? 'WebSocket error');
+      });
+
+      ws.addEventListener('close', () => {
+        clearTimeout(timer);
+        void done();
+      });
+
+    } catch (err) {
+      clearTimeout(timer);
+      void done(String(err));
+    }
   });
 }
 
@@ -73,7 +81,6 @@ export async function GET() {
     const liveStreamWorking = messages.length >= MIN_USEFUL_MESSAGES;
 
     if (liveStreamWorking) {
-      // Full live path — process real-time AIS data
       const processor = new AISProcessor();
       for (const msg of messages) {
         processor.processMessage(msg);
@@ -89,15 +96,10 @@ export async function GET() {
       }, { headers: { 'Cache-Control': 'no-store' } });
     }
 
-    // Fallback: serve pre-processed CSV snapshot data
-    // This happens when the AISstream API key is already in use (1 connection/key limit)
-    // Fix: generate a new key at https://aisstream.io/apikeys and set AISSTREAM_API_KEY
+    // Fallback: pre-processed CSV snapshot
     const seed = seedData as { ports: PortState[]; messageCount: number; timestamp: string };
     const now = new Date().toISOString();
-    const ports = seed.ports.map(p => ({
-      ...p,
-      lastUpdated: now,
-    }));
+    const ports = seed.ports.map(p => ({ ...p, lastUpdated: now }));
 
     return NextResponse.json({
       ports,
@@ -105,16 +107,11 @@ export async function GET() {
       collectionMs: COLLECTION_MS,
       timestamp: now,
       source: 'csv-snapshot',
-      wsError: error ?? (messages.length < MIN_USEFUL_MESSAGES
-        ? 'Live stream throttled — API key may be in use on another connection. Set a dedicated AISSTREAM_API_KEY for live updates.'
-        : undefined),
+      wsError: error ?? 'Live stream not ready — serving CSV snapshot.',
     }, { headers: { 'Cache-Control': 'no-store' } });
 
   } catch (err) {
     console.error('AIS collection error:', err);
-    return NextResponse.json(
-      { error: 'Failed to collect AIS data', ports: [] },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to collect AIS data', ports: [] }, { status: 500 });
   }
 }
