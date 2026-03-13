@@ -4,9 +4,10 @@ import seedData from '@/lib/seed-data.json';
 import type { PortState } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 15;
+export const runtime = 'edge'; // Edge Runtime — different network stack, avoids Vercel Node.js proxy limits
+export const maxDuration = 30;
 
-const COLLECTION_MS = 7000;
+const COLLECTION_MS = 12000; // Edge allows 30s max
 const MIN_USEFUL_MESSAGES = 50;
 const AIS_API_KEY = process.env.AISSTREAM_API_KEY ?? '0130da07ed67166aaea0fdec600cf164d85816db';
 const AIS_ENDPOINT = 'wss://stream.aisstream.io/v0/stream';
@@ -20,7 +21,7 @@ async function toText(data: string | ArrayBuffer | Blob): Promise<string> {
 async function collectAISData(durationMs: number): Promise<{ messages: string[]; error?: string }> {
   return new Promise((resolve) => {
     const rawData: Array<string | ArrayBuffer | Blob> = [];
-    let ws: InstanceType<typeof import('undici').WebSocket> | null = null;
+    let ws: WebSocket | null = null;
     let settled = false;
 
     const done = async (error?: string) => {
@@ -33,47 +34,43 @@ async function collectAISData(durationMs: number): Promise<{ messages: string[];
 
     const timer = setTimeout(() => void done(), durationMs);
 
-    (async () => {
-      try {
-        // Use undici WebSocket — works on Node.js 18/20/22 (all Vercel runtimes)
-        const { WebSocket: UndiciWS } = await import('undici');
-        ws = new UndiciWS(AIS_ENDPOINT);
+    try {
+      // Native WebSocket — available in Edge Runtime as a Web API
+      ws = new WebSocket(AIS_ENDPOINT);
 
-        ws.addEventListener('open', () => {
-          ws!.send(JSON.stringify({
-            APIKey: AIS_API_KEY,
-            BoundingBoxes: [[[-90, -180], [90, 180]]],
-            FilterMessageTypes: [
-              'PositionReport',
-              'ShipStaticData',
-              'StandardClassBPositionReport',
-              'ExtendedClassBPositionReport',
-              'StaticDataReport',
-              'LongRangeAisBroadcastMessage',
-            ],
-          }));
-        });
+      ws.addEventListener('open', () => {
+        ws!.send(JSON.stringify({
+          APIKey: AIS_API_KEY,
+          BoundingBoxes: [[[-90, -180], [90, 180]]],
+          FilterMessageTypes: [
+            'PositionReport',
+            'ShipStaticData',
+            'StandardClassBPositionReport',
+            'ExtendedClassBPositionReport',
+            'StaticDataReport',
+            'LongRangeAisBroadcastMessage',
+          ],
+        }));
+      });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ws.addEventListener('message', (event: any) => {
-          rawData.push(event.data as string | ArrayBuffer | Blob);
-        });
+      ws.addEventListener('message', (event: MessageEvent) => {
+        rawData.push(event.data as string | ArrayBuffer | Blob);
+      });
 
-        ws.addEventListener('error', (event) => {
-          clearTimeout(timer);
-          void done((event as ErrorEvent).message ?? 'WebSocket error');
-        });
-
-        ws.addEventListener('close', () => {
-          clearTimeout(timer);
-          void done();
-        });
-
-      } catch (err) {
+      ws.addEventListener('error', (event) => {
         clearTimeout(timer);
-        void done(String(err));
-      }
-    })();
+        void done((event as ErrorEvent).message ?? 'WebSocket error');
+      });
+
+      ws.addEventListener('close', (event) => {
+        clearTimeout(timer);
+        void done(`close:${(event as CloseEvent).code}`);
+      });
+
+    } catch (err) {
+      clearTimeout(timer);
+      void done(String(err));
+    }
   });
 }
 
@@ -93,7 +90,7 @@ export async function GET() {
         collectionMs: COLLECTION_MS,
         timestamp: new Date().toISOString(),
         source: 'live',
-      }, { headers: { 'Cache-Control': 'no-store' } });
+      });
     }
 
     const seed = seedData as { ports: PortState[]; messageCount: number; timestamp: string };
@@ -106,11 +103,10 @@ export async function GET() {
       collectionMs: COLLECTION_MS,
       timestamp: now,
       source: 'csv-snapshot',
-      wsError: error ?? 'Live stream not ready — serving CSV snapshot.',
-    }, { headers: { 'Cache-Control': 'no-store' } });
+      wsError: error ?? `Stream closed (${messages.length} msgs) — check AISSTREAM_API_KEY`,
+    });
 
   } catch (err) {
-    console.error('AIS collection error:', err);
-    return NextResponse.json({ error: 'Failed to collect AIS data', ports: [] }, { status: 500 });
+    return NextResponse.json({ error: String(err), ports: [] }, { status: 500 });
   }
 }
