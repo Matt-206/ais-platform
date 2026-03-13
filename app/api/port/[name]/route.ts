@@ -41,8 +41,10 @@ export async function GET(
       );
 
       if (res.ok) {
-        const data = await res.json() as PortState & { totalVessels?: number };
-        if ((data.totalVessels ?? 0) > 0 || data.score > 0) {
+        const data = await res.json() as PortState & { totalVessels?: number; source?: string };
+        // Use relay data only when it has live vessel observations
+        const hasData = (data.totalVessels ?? 0) > 0 || data.score > 0;
+        if (hasData) {
           return NextResponse.json(enrichPort(data));
         }
       }

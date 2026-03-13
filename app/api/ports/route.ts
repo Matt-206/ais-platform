@@ -36,7 +36,9 @@ export async function GET() {
           relayConnected: boolean;
         };
 
-        if (data.messageCount > 0) {
+        // Use relay data only if vessels are actually present
+        const hasLiveVessels = data.ports.some(p => p.totalVessels > 0);
+        if (hasLiveVessels) {
           return NextResponse.json({
             ...data,
             ports: data.ports.map(enrichPort),
