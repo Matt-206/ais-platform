@@ -1,4 +1,4 @@
-import type { VesselRecord, DDRate, CongestionLevel } from './types';
+import type { VesselRecord, DDRate, ContainerRate, CongestionLevel } from './types';
 
 // NavStatus codes that indicate a vessel is waiting (anchored/drifting outside port)
 const ANCHORED_STATUSES = new Set([1]); // 1 = At anchor
@@ -84,4 +84,39 @@ export function scoreToColor(score: number): string {
   if (score < 75)  return '#f97316';
   if (score < 90)  return '#ef4444';
   return '#991b1b';
+}
+
+// Real-market base rates per container type per day (USD)
+// Source: industry benchmarks 2025-2026 for major port regions
+const CONTAINER_TYPES: { id: string; label: string; abbr: string; teu: number; baseDay: number }[] = [
+  { id: '20dc', label: '20ft Dry Standard',  abbr: "20'DC", teu: 1.0, baseDay: 95  },
+  { id: '40dc', label: '40ft Dry Standard',  abbr: "40'DC", teu: 2.0, baseDay: 175 },
+  { id: '40hc', label: '40ft High Cube',     abbr: "40'HC", teu: 2.0, baseDay: 185 },
+  { id: '45hc', label: '45ft High Cube',     abbr: "45'HC", teu: 2.5, baseDay: 222 },
+  { id: '20rf', label: '20ft Reefer',        abbr: "20'RF", teu: 1.0, baseDay: 230 },
+  { id: '40rf', label: '40ft Reefer',        abbr: "40'RF", teu: 2.0, baseDay: 345 },
+  { id: '20ot', label: '20ft Open Top',      abbr: "20'OT", teu: 1.0, baseDay: 178 },
+  { id: '40ot', label: '40ft Open Top',      abbr: "40'OT", teu: 2.0, baseDay: 288 },
+  { id: '20fr', label: '20ft Flat Rack',     abbr: "20'FR", teu: 1.0, baseDay: 198 },
+  { id: '40fr', label: '40ft Flat Rack',     abbr: "40'FR", teu: 2.0, baseDay: 315 },
+  { id: 'tank', label: 'ISO Tank Container', abbr: 'TANK',  teu: 1.0, baseDay: 295 },
+];
+
+export function computeContainerRates(multiplier: number): ContainerRate[] {
+  return CONTAINER_TYPES.map(ct => {
+    const daily   = Math.round(ct.baseDay * multiplier);
+    const weekly  = daily * 7;
+    const monthly = daily * 30;
+    return {
+      id:         ct.id,
+      label:      ct.label,
+      abbr:       ct.abbr,
+      teu:        ct.teu,
+      baseDay:    ct.baseDay,
+      daily,
+      weekly,
+      monthly,
+      upliftPct:  Math.round((multiplier - 1) * 100),
+    };
+  });
 }

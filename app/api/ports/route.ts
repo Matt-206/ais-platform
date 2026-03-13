@@ -1,12 +1,22 @@
 import { NextResponse } from 'next/server';
 import seedData from '@/lib/seed-data.json';
 import type { PortState } from '@/lib/types';
+import { computeContainerRates } from '@/lib/congestion';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
 export const maxDuration = 15;
 
 const RELAY_URL = process.env.RELAY_URL ?? '';
+
+// Inject container rates from Vercel side so they always appear regardless of relay version
+function enrichPort(p: PortState): PortState {
+  const mult = p.ddMultiplier ?? 1;
+  return {
+    ...p,
+    containerRates: p.containerRates?.length ? p.containerRates : computeContainerRates(mult),
+  };
+}
 
 export async function GET() {
   // ── Try live relay ────────────────────────────────────────────────────────
@@ -26,8 +36,12 @@ export async function GET() {
           relayConnected: boolean;
         };
 
-        // Relay is live but may have no vessels yet (e.g. just started up)
-        if (data.messageCount > 0) return NextResponse.json(data);
+        if (data.messageCount > 0) {
+          return NextResponse.json({
+            ...data,
+            ports: data.ports.map(enrichPort),
+          });
+        }
       }
     } catch {
       // relay down — fall through to snapshot
@@ -37,7 +51,7 @@ export async function GET() {
   // ── Fallback: CSV snapshot ────────────────────────────────────────────────
   const seed = seedData as { ports: PortState[]; messageCount: number; timestamp: string };
   const now = new Date().toISOString();
-  const ports = seed.ports.map(p => ({ ...p, lastUpdated: now }));
+  const ports = seed.ports.map(p => enrichPort({ ...p, lastUpdated: now }));
 
   return NextResponse.json({
     ports,

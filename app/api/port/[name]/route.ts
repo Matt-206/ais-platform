@@ -2,12 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPortByName } from '@/lib/ports-config';
 import seedData from '@/lib/seed-data.json';
 import type { PortState } from '@/lib/types';
+import { computeContainerRates } from '@/lib/congestion';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
 export const maxDuration = 15;
 
 const RELAY_URL = process.env.RELAY_URL ?? '';
+
+function enrichPort(p: PortState): PortState {
+  const mult = p.ddMultiplier ?? 1;
+  return {
+    ...p,
+    containerRates: p.containerRates?.length ? p.containerRates : computeContainerRates(mult),
+  };
+}
 
 export async function GET(
   _request: NextRequest,
@@ -34,7 +43,7 @@ export async function GET(
       if (res.ok) {
         const data = await res.json() as PortState & { totalVessels?: number };
         if ((data.totalVessels ?? 0) > 0 || data.score > 0) {
-          return NextResponse.json(data);
+          return NextResponse.json(enrichPort(data));
         }
       }
     } catch {
@@ -52,9 +61,9 @@ export async function GET(
     return NextResponse.json({ error: 'Port state unavailable' }, { status: 500 });
   }
 
-  return NextResponse.json({
+  return NextResponse.json(enrichPort({
     ...portState,
     lastUpdated: new Date().toISOString(),
     source: 'csv-snapshot',
-  });
+  } as PortState));
 }
