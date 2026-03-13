@@ -1,0 +1,11 @@
+{
+  "framework": "nextjs",
+  "functions": {
+    "app/api/ports/route.ts": {
+      "maxDuration": 15
+    },
+    "app/api/port/[name]/route.ts": {
+      "maxDuration": 15
+    }
+  }
+}
