@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPortByName } from '@/lib/ports-config';
 import seedData from '@/lib/seed-data.json';
 import type { PortState } from '@/lib/types';
-import { computeContainerRates } from '@/lib/congestion';
+import { computeContainerRates, getDDRate, scoreToColor, getCongestionLevel } from '@/lib/congestion';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
@@ -11,10 +11,14 @@ export const maxDuration = 15;
 const RELAY_URL = process.env.RELAY_URL ?? '';
 
 function enrichPort(p: PortState): PortState {
-  const mult = p.ddMultiplier ?? 1;
+  const { rate, multiplier, level, color } = getDDRate(p.score);
   return {
     ...p,
-    containerRates: p.containerRates?.length ? p.containerRates : computeContainerRates(mult),
+    ddRate:        rate,
+    ddMultiplier:  multiplier,
+    level:         getCongestionLevel(p.score),
+    color:         scoreToColor(p.score),
+    containerRates: computeContainerRates(multiplier),
   };
 }
 

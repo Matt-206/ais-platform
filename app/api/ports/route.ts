@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import seedData from '@/lib/seed-data.json';
 import type { PortState } from '@/lib/types';
-import { computeContainerRates } from '@/lib/congestion';
+import { computeContainerRates, getDDRate, scoreToColor, getCongestionLevel } from '@/lib/congestion';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
@@ -9,12 +9,21 @@ export const maxDuration = 15;
 
 const RELAY_URL = process.env.RELAY_URL ?? '';
 
-// Inject container rates from Vercel side so they always appear regardless of relay version
+/**
+ * Always recompute ddRate, ddMultiplier, level, color from the current
+ * getDDRate formula using the port's live score. This ensures the new
+ * multiplier scale (including discounts at low occupancy) is applied
+ * regardless of what the relay or seed data stored.
+ */
 function enrichPort(p: PortState): PortState {
-  const mult = p.ddMultiplier ?? 1;
+  const { rate, multiplier, level, color } = getDDRate(p.score);
   return {
     ...p,
-    containerRates: p.containerRates?.length ? p.containerRates : computeContainerRates(mult),
+    ddRate:        rate,
+    ddMultiplier:  multiplier,
+    level:         getCongestionLevel(p.score),
+    color:         scoreToColor(p.score),
+    containerRates: computeContainerRates(multiplier),
   };
 }
 
