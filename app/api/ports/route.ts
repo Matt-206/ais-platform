@@ -8,7 +8,7 @@ export const maxDuration = 15;
 
 const COLLECTION_MS = 7000;
 const MIN_USEFUL_MESSAGES = 50; // below this → live stream is throttled
-const AIS_API_KEY = process.env.AISSTREAM_API_KEY ?? '36484c5f046482be74ba63c44bf71bf8269a328f';
+const AIS_API_KEY = process.env.AISSTREAM_API_KEY ?? '0130da07ed67166aaea0fdec600cf164d85816db';
 const AIS_ENDPOINT = 'wss://stream.aisstream.io/v0/stream';
 
 async function collectAISData(durationMs: number): Promise<{ messages: string[]; error?: string }> {
