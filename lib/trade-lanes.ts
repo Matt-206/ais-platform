@@ -87,16 +87,16 @@ export const TRADE_LANES: TradeLane[] = [
     label: 'Southeast Asia — Singapore / Malaysia',
     demurrageFree: 4,
     detentionFree: 5,
-    ports: ['Singapore', 'Port Klang', 'Tanjung Pelepas'],
-    source: 'PSA Singapore Terminal Conditions 2025; MSC SE Asia Tariff; Port Klang Authority 2025',
+    ports: ['Singapore', 'Tanjung Pelepas'],
+    source: 'PSA Singapore Terminal Conditions 2025; MSC SE Asia Tariff',
   },
   {
     id: 'east-asia',
-    label: 'East Asia — China / South Korea / Japan',
+    label: 'East Asia — China / Hong Kong',
     demurrageFree: 5,
     detentionFree: 5,
-    ports: ['Shanghai', 'Ningbo-Zhoushan', 'Guangzhou', 'Hong Kong', 'Busan'],
-    source: 'Maersk Far East Local Charges 2025; CMA CGM Asia Tariff; KPCT Busan Conditions 2025',
+    ports: ['Guangzhou', 'Hong Kong'],
+    source: 'Maersk Far East Local Charges 2025; CMA CGM Asia Tariff',
   },
 ];
 

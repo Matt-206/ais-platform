@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   X, Anchor, Ship, TrendingUp, DollarSign,
-  AlertTriangle, RefreshCw, Signal,
+  AlertTriangle, RefreshCw, Signal, Navigation, ArrowDownToLine,
 } from 'lucide-react';
 import type { PortState, VesselRecord } from '@/lib/types';
 import { classifyNavStatus } from '@/lib/congestion';
@@ -232,10 +232,10 @@ export default function PortPanel({ portName, initialData, onClose }: PortPanelP
 
           {/* Vessel Metrics */}
           <div className="grid grid-cols-2 gap-3">
-            <MetricCard label="Anchored"  value={data.anchored}  icon="⚓" color="#f59e0b" sub="Waiting outside port" />
-            <MetricCard label="Moored"    value={data.moored}    icon="🚢" color="#3b82f6" sub="At berth" />
-            <MetricCard label="Underway"  value={data.underway}  icon="🧭" color="#22c55e" sub="Moving in zone" />
-            <MetricCard label="Inbound"   value={data.inbound}   icon="⬇️" color="#8b5cf6" sub="Approaching outer zone" />
+            <MetricCard label="Anchored"  value={data.anchored}  icon={Anchor}          color="#f59e0b" sub="Waiting outside port" />
+            <MetricCard label="Moored"    value={data.moored}    icon={Ship}            color="#3b82f6" sub="At berth" />
+            <MetricCard label="Underway"  value={data.underway}  icon={Navigation}      color="#22c55e" sub="Moving in zone" />
+            <MetricCard label="Inbound"   value={data.inbound}   icon={ArrowDownToLine} color="#8b5cf6" sub="Approaching outer zone" />
           </div>
 
           {/* Vessel count summary */}
@@ -292,8 +292,8 @@ export default function PortPanel({ portName, initialData, onClose }: PortPanelP
               </div>
             </div>
           ) : (
-            <div className="text-center py-6 text-slate-500 text-sm">
-              <Anchor size={32} className="mx-auto mb-2 opacity-30" />
+            <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl text-center py-6 text-slate-500 text-sm">
+              <Anchor size={28} className="mx-auto mb-2 opacity-30" />
               <p>No commercial vessels detected yet.</p>
               <p className="text-xs mt-1">Data accumulates over the first 30–60 seconds.</p>
             </div>

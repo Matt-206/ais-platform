@@ -6,7 +6,7 @@ import { CONTAINER_TYPES, computeScenario } from '@/lib/congestion';
 import { TRADE_LANES, getTradeLane } from '@/lib/trade-lanes';
 import {
   Calculator, ChevronDown, ChevronUp,
-  AlertTriangle, TrendingUp, DollarSign, Info,
+  AlertTriangle, TrendingUp, DollarSign, Info, CheckCircle,
 } from 'lucide-react';
 
 interface DDScenarioCalculatorProps {
@@ -338,12 +338,10 @@ export default function DDScenarioCalculator({
             </>
           ) : (
             <div className="text-center py-4">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-2">
-                <span className="text-emerald-400 text-sm">✓</span>
-              </div>
+              <CheckCircle size={28} className="mx-auto mb-2 text-emerald-500 opacity-70" />
               <p className="text-sm text-slate-400">No demurrage expected</p>
               <p className="text-xs text-slate-600 mt-1">
-                {totalDays}d total ≤ {freeDays}d free period
+                {totalDays}d total within {freeDays}d free period
               </p>
             </div>
           )}

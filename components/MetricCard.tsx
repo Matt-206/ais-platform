@@ -1,18 +1,20 @@
 'use client';
 
+import type { LucideIcon } from 'lucide-react';
+
 interface MetricCardProps {
   label: string;
   value: number | string;
-  icon: string;
+  icon: LucideIcon;
   color?: string;
   sub?: string;
 }
 
-export default function MetricCard({ label, value, icon, color = '#94a3b8', sub }: MetricCardProps) {
+export default function MetricCard({ label, value, icon: Icon, color = '#94a3b8', sub }: MetricCardProps) {
   return (
     <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4 flex flex-col gap-1">
       <div className="flex items-center gap-2">
-        <span className="text-xl">{icon}</span>
+        <Icon size={15} style={{ color }} />
         <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">{label}</span>
       </div>
       <div className="text-2xl font-bold" style={{ color }}>

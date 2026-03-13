@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { ContainerRate, CongestionLevel } from '@/lib/types';
 import { TIER_MULTIPLIERS } from '@/lib/congestion';
-import { Package, ChevronDown, ChevronUp, Info, ExternalLink } from 'lucide-react';
+import { Package, ChevronDown, ChevronUp, Info, ExternalLink, Zap, FileText } from 'lucide-react';
 
 interface DDContainerTableProps {
   rates: ContainerRate[];
@@ -78,12 +78,15 @@ export default function DDContainerTable({ rates, level, color, multiplier }: DD
                 <button
                   key={m}
                   onClick={() => setRateMode(m)}
-                  className={`px-2.5 py-1 transition-colors capitalize ${
+                  className={`px-2.5 py-1 transition-colors flex items-center gap-1 ${
                     rateMode === m ? 'text-white font-semibold' : 'text-slate-500 hover:text-slate-300'
                   }`}
                   style={rateMode === m ? { backgroundColor: color + '44' } : {}}
                 >
-                  {m === 'dynamic' ? '⚡ Live' : '📋 Published'}
+                  {m === 'dynamic'
+                    ? <><Zap size={10} /> Live</>
+                    : <><FileText size={10} /> Published</>
+                  }
                 </button>
               ))}
             </div>
