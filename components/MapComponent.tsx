@@ -1,10 +1,20 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import type { PortState } from '@/lib/types';
+import type { PortState, VesselRecord } from '@/lib/types';
 
 // Dynamically import Leaflet only on client
 let L: typeof import('leaflet') | null = null;
+
+const VESSELS_PER_PORT = 200; // Cap for performance
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
 interface MapComponentProps {
   ports: PortState[];
@@ -17,14 +27,12 @@ function getRadius(score: number): number {
   return 8 + (score / 100) * 14;
 }
 
-function getPulseColor(color: string): string {
-  return color;
-}
-
 export default function MapComponent({ ports, selectedPort, onPortClick, loading }: MapComponentProps) {
   const mapRef = useRef<import('leaflet').Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<Map<string, import('leaflet').CircleMarker>>(new Map());
+  const vesselLayerRef = useRef<import('leaflet').LayerGroup | null>(null);
+  const vesselMarkersRef = useRef<Map<string, import('leaflet').Marker>>(new Map());
   const initRef = useRef(false);
 
   // Initialize map
@@ -60,6 +68,8 @@ export default function MapComponent({ ports, selectedPort, onPortClick, loading
           maxZoom: 20,
         }
       ).addTo(mapRef.current);
+
+      vesselLayerRef.current = L.layerGroup().addTo(mapRef.current);
     })();
 
     return () => {
@@ -137,6 +147,42 @@ export default function MapComponent({ ports, selectedPort, onPortClick, loading
       }
     }
   }, [ports, selectedPort, onPortClick]);
+
+  // Vessel markers with boat icon
+  useEffect(() => {
+    if (!L || !mapRef.current || !vesselLayerRef.current) return;
+
+    const layer = vesselLayerRef.current;
+    layer.clearLayers();
+    vesselMarkersRef.current.clear();
+
+    for (const port of ports) {
+      const vessels = (port.vessels ?? []) as (VesselRecord & { statusLabel?: string })[];
+      const toShow = vessels.slice(0, VESSELS_PER_PORT);
+
+      for (const v of toShow) {
+        const heading = v.heading ?? 0;
+        const icon = L!.divIcon({
+          html: `<img src="/boat.svg" alt="" style="width:14px;height:14px;transform:rotate(${heading}deg);" />`,
+          className: 'vessel-marker',
+          iconSize: [14, 14],
+          iconAnchor: [7, 7],
+        });
+
+        const marker = L!.marker([v.lat, v.lon], { icon }).addTo(layer);
+        const status = v.statusLabel ?? '—';
+        marker.bindTooltip(
+          `<div style="font-family:system-ui;background:#0f172a;border:1px solid #334155;border-radius:6px;padding:6px 10px;color:white;font-size:11px;white-space:nowrap;">
+            <div style="font-weight:600;margin-bottom:2px;">${escapeHtml(v.name)}</div>
+            <div style="color:#94a3b8;">${status} · ${v.zone}</div>
+            ${v.destination ? `<div style="color:#64748b;margin-top:2px;">→ ${escapeHtml(v.destination)}</div>` : ''}
+          </div>`,
+          { className: 'ais-tooltip', opacity: 1, permanent: false, offset: [0, -7] }
+        );
+        vesselMarkersRef.current.set(`${port.name}-${v.mmsi}`, marker);
+      }
+    }
+  }, [ports]);
 
   return (
     <div className="relative w-full h-full">

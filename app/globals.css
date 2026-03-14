@@ -52,6 +52,12 @@ html, body {
   padding: 0 !important;
 }
 
+/* Vessel boat markers — no default pin background */
+.leaflet-marker-icon.vessel-marker {
+  background: none !important;
+  border: none !important;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
