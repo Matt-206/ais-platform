@@ -68,6 +68,16 @@ export interface AISMessage {
 export interface DDRate {
   rate: number;
   multiplier: number;
+  /**
+   * Additional free days offered at low occupancy (score < 25).
+   * Score 0–10:  +5 free days  (terminal actively competing for cargo)
+   * Score 10–25: +2 free days  (mild incentive to fill slack capacity)
+   * Score 25+:    0 free days  (normal tariff schedule applies)
+   *
+   * Based on DP World off-peak terminal incentive programmes and
+   * PSA Singapore slow-season free-time extensions (2024–2025).
+   */
+  bonusFreeDays: number;
   level: CongestionLevel;
   color: string;
 }
@@ -119,8 +129,14 @@ export interface ContainerRate {
 export interface ScenarioBreakdown {
   containerType: string;
   containerAbbr: string;
+  /** WTP elasticity factor used for this container type */
+  wtpElasticity: number;
   quantity: number;
   freeDays: number;
+  /** Bonus free days added by terminal at low occupancy */
+  bonusFreeDays: number;
+  /** freeDays + bonusFreeDays — actual chargeable threshold */
+  effectiveFreeDays: number;
   totalDays: number;
   excessDays: number;
   tier1Days: number;
@@ -131,11 +147,13 @@ export interface ScenarioBreakdown {
   publishedTier1Cost: number;
   publishedTier2Cost: number;
   publishedTier3Cost: number;
-  /** Cost with congestion-adjusted dynamic rates */
+  /** Cost with congestion-adjusted dynamic rates (WTP-elasticity adjusted) */
   dynamicTotal: number;
   dynamicTier1Cost: number;
   dynamicTier2Cost: number;
   dynamicTier3Cost: number;
   /** How much more the dynamic rate costs vs published (congestion premium) */
   congestionPremium: number;
+  /** Effective per-container-type adjusted multiplier */
+  adjustedMultiplier: number;
 }

@@ -12,7 +12,7 @@ const MapComponent = dynamic(() => import('@/components/MapComponent'), {
   loading: () => (
     <div className="w-full h-full flex items-center justify-center bg-[#0a0f1a]">
       <div className="text-center">
-        <div className="w-12 h-12 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <div className="w-12 h-12 border-2 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
         <p className="text-slate-400">Loading map…</p>
       </div>
     </div>
@@ -126,10 +126,7 @@ export default function HomePage() {
                     : 'bg-slate-900 border-slate-700/50 hover:border-slate-600'
                 }`}
               >
-                <span
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: port.color }}
-                />
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: port.color }} />
                 <span className="text-slate-200">{port.name}</span>
                 <span className="font-bold" style={{ color: port.color }}>{port.score}</span>
               </button>
@@ -150,12 +147,12 @@ export default function HomePage() {
         {loading && ports.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#0a0f1a]/80 z-[500] backdrop-blur-sm">
             <div className="text-center bg-slate-900/90 border border-slate-700/50 rounded-2xl p-8 max-w-sm">
-              <div className="w-14 h-14 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-5" />
+              <div className="w-14 h-14 border-2 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto mb-5" />
               <h2 className="text-white font-bold text-lg mb-2">Connecting to AIS Stream</h2>
               <p className="text-slate-400 text-sm leading-relaxed">
                 Collecting live vessel positions from{' '}
-                <span className="text-cyan-400">AISstream.io</span>. Building congestion
-                scores for 20 major world ports…
+                <span className="text-sky-400">AISstream.io</span>. Building congestion
+                scores for 5 major world ports…
               </p>
               <p className="text-slate-500 text-xs mt-3">~7 seconds</p>
             </div>

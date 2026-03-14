@@ -3,21 +3,23 @@ import { getPortByName } from '@/lib/ports-config';
 import seedData from '@/lib/seed-data.json';
 import type { PortState } from '@/lib/types';
 import { computeContainerRates, getDDRate, scoreToColor, getCongestionLevel } from '@/lib/congestion';
+import { PORT_TRADE_LANE } from '@/lib/trade-lanes';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
-export const maxDuration = 15;
+export const maxDuration = 30;
 
 const RELAY_URL = process.env.RELAY_URL ?? '';
 
 function enrichPort(p: PortState): PortState {
-  const { rate, multiplier, level, color } = getDDRate(p.score);
+  const tradeLaneId = PORT_TRADE_LANE[p.name];
+  const { rate, multiplier, level, color } = getDDRate(p.score, tradeLaneId);
   return {
     ...p,
-    ddRate:        rate,
-    ddMultiplier:  multiplier,
-    level:         getCongestionLevel(p.score),
-    color:         scoreToColor(p.score),
+    ddRate:         rate,
+    ddMultiplier:   multiplier,
+    level:          getCongestionLevel(p.score),
+    color:          scoreToColor(p.score),
     containerRates: computeContainerRates(multiplier),
   };
 }
@@ -39,14 +41,14 @@ export async function GET(
       const res = await fetch(
         `${RELAY_URL}/port/${encodeURIComponent(portConfig.name)}`,
         {
-          signal: AbortSignal.timeout(10_000),
+          signal: AbortSignal.timeout(25_000),
           headers: { 'Cache-Control': 'no-store' },
         }
       );
 
       if (res.ok) {
         const data = await res.json() as PortState & { totalVessels?: number; source?: string };
-        // Use relay data only when it has live vessel observations
+        // Use live data only when vessels or a score are present
         const hasData = (data.totalVessels ?? 0) > 0 || data.score > 0;
         if (hasData) {
           return NextResponse.json(enrichPort(data));
@@ -58,6 +60,11 @@ export async function GET(
   }
 
   // ── Fallback: CSV snapshot ────────────────────────────────────────────────
+  // Background warm-up ping — same rationale as /api/ports fallback.
+  if (RELAY_URL) {
+    fetch(`${RELAY_URL}/`, { signal: AbortSignal.timeout(5_000) }).catch(() => {});
+  }
+
   const seed = seedData as { ports: PortState[] };
   const portState = seed.ports.find(
     p => p.name.toLowerCase() === portConfig.name.toLowerCase()

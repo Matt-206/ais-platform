@@ -2,10 +2,10 @@
   "framework": "nextjs",
   "functions": {
     "app/api/ports/route.ts": {
-      "maxDuration": 15
+      "maxDuration": 30
     },
     "app/api/port/[name]/route.ts": {
-      "maxDuration": 15
+      "maxDuration": 30
     }
   }
 }

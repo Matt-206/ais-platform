@@ -49,7 +49,7 @@ export default function ForecastChart({ forecast, currentScore }: ForecastChartP
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#1e293b',
+              backgroundColor: '#2C1A0E',
               borderColor: '#334155',
               borderWidth: 1,
               titleColor: '#94a3b8',
@@ -63,18 +63,17 @@ export default function ForecastChart({ forecast, currentScore }: ForecastChartP
             y: {
               min: 0,
               max: 100,
-              grid: { color: '#1e293b' },
-              ticks: { color: '#475569', font: { size: 10 } },
+              grid: { color: '#6A3A18' },
+              ticks: { color: '#94a3b8', font: { size: 10 } },
               title: { display: false },
             },
             x: {
-              grid: { color: '#1e293b' },
+              grid: { color: '#6A3A18' },
               ticks: {
-                color: '#475569',
+                color: '#94a3b8',
                 font: { size: 10 },
                 maxRotation: 0,
                 callback: (_val, idx) => {
-                  // Show every 3rd label to avoid crowding
                   return idx % 3 === 0 ? labels[idx] : '';
                 },
               },

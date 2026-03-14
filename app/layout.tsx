@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Port Congestion Intelligence Platform',
-  description: 'Real-time global AIS vessel tracking with congestion scoring and dynamic D&D pricing recommendations for 20 major world ports.',
+  description: 'Real-time global AIS vessel tracking with congestion scoring and dynamic D&D pricing recommendations for 5 major world ports.',
   keywords: 'AIS, port congestion, demurrage, detention, maritime, shipping, vessel tracking',
   openGraph: {
     title: 'Port Congestion Intelligence Platform',
