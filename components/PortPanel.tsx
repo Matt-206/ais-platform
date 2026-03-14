@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   X, Anchor, Ship, TrendingUp, DollarSign,
-  AlertTriangle, RefreshCw, Signal, Navigation, ArrowDownToLine,
+  AlertTriangle, RefreshCw, Signal, Navigation, ArrowDownToLine, HelpCircle,
 } from 'lucide-react';
 import type { PortState, VesselRecord } from '@/lib/types';
 import { classifyNavStatus } from '@/lib/congestion';
@@ -11,6 +11,7 @@ import MetricCard from './MetricCard';
 import ForecastChart from './ForecastChart';
 import DDContainerTable from './DDContainerTable';
 import DDScenarioCalculator from './DDScenarioCalculator';
+import ComplianceLedger from './ComplianceLedger';
 
 interface PortPanelProps {
   portName: string | null;
@@ -70,18 +71,30 @@ function VesselRow({ vessel }: { vessel: VesselRecord }) {
   );
 }
 
-function ReliabilityBadge({ reliability }: { reliability?: 'high' | 'medium' | 'low' }) {
-  if (!reliability) return null;
-  const cfg = {
-    high:   { label: 'High data quality',   color: '#22c55e' },
-    medium: { label: 'Medium data quality',  color: '#eab308' },
-    low:    { label: 'Limited AIS coverage', color: '#64748b' },
+function ReliabilityBadge({ reliability, confidence }: { reliability?: 'high' | 'medium' | 'low'; confidence?: 'high' | 'medium' | 'low' }) {
+  const source = confidence ?? reliability;
+  if (!source) return null;
+  const cfg: Record<string, { label: string; color: string }> = {
+    high:   { label: 'High confidence',   color: '#22c55e' },
+    medium: { label: 'Medium confidence', color: '#eab308' },
+    low:    { label: 'Low confidence',    color: '#64748b' },
   };
-  const c = cfg[reliability];
+  const c = cfg[source];
   return (
     <span className="flex items-center gap-1 text-xs" style={{ color: c.color }}>
       <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: c.color }} />
       {c.label}
+    </span>
+  );
+}
+
+function DataLineage({ data }: { data: { totalVessels: number; commercialVessels: number; messageCount?: number } }) {
+  return (
+    <span className="text-xs" style={{ color: '#64748b' }}>
+      Based on {data.commercialVessels} commercial vessels ({data.totalVessels} total)
+      {data.messageCount != null && data.messageCount > 0 && (
+        <> · {data.messageCount.toLocaleString()} AIS messages</>
+      )}
     </span>
   );
 }
@@ -127,11 +140,16 @@ export default function PortPanel({ portName, initialData, onClose }: PortPanelP
         <div>
           <h2 className="text-lg font-bold" style={{ color: '#f1f5f9' }}>{portName}</h2>
           {data && (
-            <div className="flex items-center gap-3 mt-0.5">
-              <p className="text-xs text-slate-500">
-                {data.lat.toFixed(3)}°, {data.lon.toFixed(3)}°
-              </p>
-              <ReliabilityBadge reliability={data.reliability} />
+            <div className="flex flex-col gap-0.5 mt-0.5">
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-slate-500">
+                  {data.lat.toFixed(3)}°, {data.lon.toFixed(3)}°
+                </p>
+                <ReliabilityBadge reliability={data.reliability} confidence={data.confidence} />
+              </div>
+              {data.dataQuality && (
+                <DataLineage data={data.dataQuality} />
+              )}
             </div>
           )}
         </div>
@@ -202,7 +220,11 @@ export default function PortPanel({ portName, initialData, onClose }: PortPanelP
             </div>
             {lastFetch && (
               <p className="text-xs mt-2 text-right" style={{ color: '#64748b' }}>
-                Updated {lastFetch.toLocaleTimeString()} · auto-refreshes every 60s
+                Data as of {lastFetch.toLocaleTimeString()}
+                {data.dataQuality && (
+                  <> · {data.dataQuality.commercialVessels} commercial ({data.dataQuality.totalVessels} total)</>
+                )}
+                {' '}· auto-refreshes every 60s
               </p>
             )}
           </div>
@@ -246,29 +268,51 @@ export default function PortPanel({ portName, initialData, onClose }: PortPanelP
             multiplier={data.ddMultiplier}
           />
 
-          {/* Vessel Metrics — container-industry colours */}
-          <div className="grid grid-cols-2 gap-3">
-            <MetricCard label="Anchored"  value={data.anchored}  icon={Anchor}          color="#f59e0b" sub="Waiting outside port" />
-            <MetricCard label="Moored"    value={data.moored}    icon={Ship}            color="#38bdf8" sub="At berth" />
-            <MetricCard label="Underway"  value={data.underway}  icon={Navigation}      color="#22c55e" sub="Moving in zone" />
-            <MetricCard label="Inbound"   value={data.inbound}   icon={ArrowDownToLine} color="#f97316" sub="Approaching outer zone" />
-          </div>
+          {/* Vessel Metrics — anchored + moored + underway + other = totalVessels */}
+          {(() => {
+            const other = data.other ?? Math.max(0, data.totalVessels - data.anchored - data.moored - data.underway);
+            const sum = data.anchored + data.moored + data.underway + other;
+            const mathOk = sum === data.totalVessels;
+            return (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <MetricCard label="Anchored"  value={data.anchored}  icon={Anchor}          color="#f59e0b" sub="Waiting outside port" />
+                  <MetricCard label="Moored"   value={data.moored}    icon={Ship}            color="#38bdf8" sub="At berth" />
+                  <MetricCard label="Underway" value={data.underway}   icon={Navigation}      color="#22c55e" sub={data.inbound > 0 ? `${data.inbound} inbound approaching` : 'Moving in zone'} />
+                  {other > 0 && (
+                    <MetricCard label="Other"   value={other}         icon={HelpCircle}     color="#64748b" sub="Undefined/fishing/etc." />
+                  )}
+                </div>
 
-          {/* Vessel count summary */}
-          <div className="rounded-xl p-3" style={{ background: 'rgba(15,23,42,0.95)', border: '1px solid #334155' }}>
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1.5" style={{ color: '#94a3b8' }}>
-                <Signal size={12} />
-                <span>Total AIS signals in zone:</span>
-                <span className="font-bold" style={{ color: '#f1f5f9' }}>{data.totalVessels}</span>
-              </div>
-              <div className="flex items-center gap-1.5" style={{ color: '#38bdf8' }}>
-                <Ship size={12} />
-                <span>Commercial (scored):</span>
-                <span className="font-bold">{data.commercialVessels ?? '—'}</span>
-              </div>
-            </div>
-          </div>
+                {/* Vessel count summary — math check */}
+                <div className="rounded-xl p-3" style={{ background: 'rgba(15,23,42,0.95)', border: '1px solid #334155' }}>
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5" style={{ color: '#94a3b8' }}>
+                      <Signal size={12} />
+                      <span>Total vessels:</span>
+                      <span className="font-bold" style={{ color: '#f1f5f9' }}>{data.totalVessels}</span>
+                      {mathOk && (
+                        <span className="text-emerald-500/80" title="Anchored + Moored + Underway + Other = Total">
+                          ✓
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5" style={{ color: '#38bdf8' }}>
+                      <Ship size={12} />
+                      <span>Commercial (scored):</span>
+                      <span className="font-bold">{data.commercialVessels ?? '—'}</span>
+                    </div>
+                  </div>
+                  <p className="text-xs mt-1.5" style={{ color: '#64748b' }}>
+                    {data.anchored} anchored + {data.moored} moored + {data.underway} underway{other > 0 ? ` + ${other} other` : ''} = {data.totalVessels}
+                  </p>
+                </div>
+              </>
+            );
+          })()}
+
+          {/* Compliance Ledger — audit trail for regulatory review */}
+          <ComplianceLedger portName={data.name} data={data} />
 
           {/* 12-hour Forecast */}
           <div className="rounded-xl p-4" style={{ background: 'rgba(15,23,42,0.95)', border: '1px solid #334155' }}>

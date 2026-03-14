@@ -71,7 +71,27 @@ export async function GET() {
 
   const seed = seedData as { ports: PortState[]; messageCount: number; timestamp: string };
   const now = new Date().toISOString();
-  const ports = seed.ports.map(p => enrichPort({ ...p, lastUpdated: now }));
+  const ports = seed.ports.map(p => {
+    const vessels = p.vessels ?? [];
+    const commercialVessels = p.commercialVessels ?? vessels.filter((v: { shipType?: number | null }) => v.shipType != null && v.shipType >= 70 && v.shipType <= 89).length;
+    const other = Math.max(0, (p.totalVessels ?? 0) - (p.anchored ?? 0) - (p.moored ?? 0) - (p.underway ?? 0));
+    return enrichPort({
+      ...p,
+      lastUpdated: now,
+      other,
+      commercialVessels,
+      dataQuality: {
+        totalVessels: p.totalVessels ?? 0,
+        commercialVessels,
+        messageCount: 0,
+        anchored: p.anchored ?? 0,
+        moored: p.moored ?? 0,
+        underway: p.underway ?? 0,
+        inbound: p.inbound ?? 0,
+      },
+      confidence: 'high' as const,
+    });
+  });
 
   return NextResponse.json({
     ports,

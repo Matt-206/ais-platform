@@ -74,9 +74,25 @@ export async function GET(
     return NextResponse.json({ error: 'Port state unavailable' }, { status: 500 });
   }
 
-  return NextResponse.json(enrichPort({
+  const vessels = portState.vessels ?? [];
+  const commercialVessels = portState.commercialVessels ?? vessels.filter((v: { shipType?: number | null }) => v.shipType != null && v.shipType >= 70 && v.shipType <= 89).length;
+  const other = Math.max(0, (portState.totalVessels ?? 0) - (portState.anchored ?? 0) - (portState.moored ?? 0) - (portState.underway ?? 0));
+  const enriched = enrichPort({
     ...portState,
     lastUpdated: new Date().toISOString(),
     source: 'csv-snapshot',
-  } as PortState));
+    other,
+    commercialVessels,
+    dataQuality: {
+      totalVessels: portState.totalVessels ?? 0,
+      commercialVessels,
+      messageCount: 0,
+      anchored: portState.anchored ?? 0,
+      moored: portState.moored ?? 0,
+      underway: portState.underway ?? 0,
+      inbound: portState.inbound ?? 0,
+    },
+    confidence: 'high', // snapshot has full data
+  } as PortState);
+  return NextResponse.json(enriched);
 }

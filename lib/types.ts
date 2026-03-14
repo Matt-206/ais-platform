@@ -29,6 +29,17 @@ export interface VesselRecord {
   lastSeen: number; // unix ms
 }
 
+/** Per-port data quality metrics for transparency and confidence scoring */
+export interface DataQuality {
+  totalVessels: number;
+  commercialVessels: number;
+  messageCount: number;
+  anchored: number;
+  moored: number;
+  underway: number;
+  inbound: number;
+}
+
 export interface PortState {
   name: string;
   lat: number;
@@ -43,12 +54,18 @@ export interface PortState {
   moored: number;
   underway: number;
   inbound: number;
+  /** Vessels with navStatus not anchored/moored/underway — ensures anchored+moored+underway+other === totalVessels */
+  other?: number;
   totalVessels: number;
   commercialVessels?: number;
   vessels: VesselRecord[];
   containerRates?: ContainerRate[];
   forecast: number[];
   lastUpdated: string;
+  /** Data lineage: inputs used for congestion/pricing calculation */
+  dataQuality?: DataQuality;
+  /** Confidence in score based on vessel coverage: high | medium | low */
+  confidence?: 'high' | 'medium' | 'low';
 }
 
 export interface AISMeta {

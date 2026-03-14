@@ -1,6 +1,7 @@
 'use client';
 
-import { Activity, RefreshCw, Wifi, Database } from 'lucide-react';
+import Link from 'next/link';
+import { Activity, RefreshCw, Wifi, Database, FileText } from 'lucide-react';
 
 interface HeaderProps {
   lastUpdated: string | null;
@@ -18,13 +19,23 @@ export default function Header({ lastUpdated, messageCount, loading, onRefresh, 
     <header className="h-14 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700/50 flex items-center px-4 gap-4 z-[600] relative">
       {/* Logo + Title */}
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 bg-sky-500/20 border border-sky-500/30 rounded-lg flex items-center justify-center">
-          <Activity size={16} className="text-sky-400" />
-        </div>
-        <div>
-          <h1 className="text-sm font-bold text-white leading-none">Port Congestion Intelligence</h1>
-          <p className="text-[10px] text-slate-500 leading-none mt-0.5">Live AIS · 15 Major Ports · Real-time D&D Pricing</p>
-        </div>
+        <Link href="/" className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-sky-500/20 border border-sky-500/30 rounded-lg flex items-center justify-center">
+            <Activity size={16} className="text-sky-400" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-white leading-none">Port Congestion Intelligence</h1>
+            <p className="text-[10px] text-slate-500 leading-none mt-0.5">Live AIS · 5 Major Ports · Real-time D&D Pricing</p>
+          </div>
+        </Link>
+        <Link
+          href="/methodology"
+          className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors"
+          title="How scores and pricing are computed"
+        >
+          <FileText size={12} />
+          Methodology
+        </Link>
       </div>
 
       <div className="ml-auto flex items-center gap-3">
