@@ -268,11 +268,12 @@ export default function PortPanel({ portName, initialData, onClose }: PortPanelP
             multiplier={data.ddMultiplier}
           />
 
-          {/* Vessel Metrics — anchored + moored + underway + other = totalVessels */}
+          {/* Vessel Metrics — commercial only (anchored + moored + underway + other = commercialVessels) */}
           {(() => {
-            const other = data.other ?? Math.max(0, data.totalVessels - data.anchored - data.moored - data.underway);
+            const other = data.other ?? Math.max(0, (data.commercialVessels ?? 0) - data.anchored - data.moored - data.underway);
             const sum = data.anchored + data.moored + data.underway + other;
-            const mathOk = sum === data.totalVessels;
+            const commercial = data.commercialVessels ?? 0;
+            const mathOk = sum === commercial;
             return (
               <>
                 <div className="grid grid-cols-2 gap-3">
@@ -284,27 +285,27 @@ export default function PortPanel({ portName, initialData, onClose }: PortPanelP
                   )}
                 </div>
 
-                {/* Vessel count summary — math check */}
+                {/* Vessel count summary — commercial only, matches list */}
                 <div className="rounded-xl p-3" style={{ background: 'rgba(15,23,42,0.95)', border: '1px solid #334155' }}>
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1.5" style={{ color: '#94a3b8' }}>
                       <Signal size={12} />
-                      <span>Total vessels:</span>
+                      <span>Total (all types):</span>
                       <span className="font-bold" style={{ color: '#f1f5f9' }}>{data.totalVessels}</span>
-                      {mathOk && (
-                        <span className="text-emerald-500/80" title="Anchored + Moored + Underway + Other = Total">
-                          ✓
-                        </span>
-                      )}
                     </div>
                     <div className="flex items-center gap-1.5" style={{ color: '#38bdf8' }}>
                       <Ship size={12} />
                       <span>Commercial (scored):</span>
-                      <span className="font-bold">{data.commercialVessels ?? '—'}</span>
+                      <span className="font-bold">{commercial}</span>
+                      {mathOk && (
+                        <span className="text-emerald-500/80" title="Anchored + Moored + Underway + Other = Commercial">
+                          ✓
+                        </span>
+                      )}
                     </div>
                   </div>
                   <p className="text-xs mt-1.5" style={{ color: '#64748b' }}>
-                    {data.anchored} anchored + {data.moored} moored + {data.underway} underway{other > 0 ? ` + ${other} other` : ''} = {data.totalVessels}
+                    {data.anchored} anchored + {data.moored} moored + {data.underway} underway{other > 0 ? ` + ${other} other` : ''} = {commercial} commercial
                   </p>
                 </div>
               </>
