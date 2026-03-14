@@ -39,12 +39,14 @@ export function computeCongestionScore(
   const innerVessels = vessels.filter(v => v.zone === 'inner');
   const outerVessels = vessels.filter(v => v.zone === 'outer');
 
-  // Commercial vessels only for scoring
-  const commercial = innerVessels.filter(v => isCommercialVessel(v.shipType));
+  // Commercial vessels only for scoring (ship types 70–89: cargo, tanker)
+  const commercial = vessels.filter(v => isCommercialVessel(v.shipType));
+  const innerCommercial = commercial.filter(v => v.zone === 'inner');
+  const outerCommercial = commercial.filter(v => v.zone === 'outer');
 
-  const anchoredCount = vessels.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone) === 'anchored').length;
-  const mooredCount = innerVessels.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone) === 'moored').length;
-  const underwayInner = innerVessels.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone) === 'underway').length;
+  const anchoredCount = commercial.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone) === 'anchored').length;
+  const mooredCount = innerCommercial.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone) === 'moored').length;
+  const underwayInner = innerCommercial.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone) === 'underway').length;
 
   // Anchored vessels (strongest signal — waiting outside port)
   // Weight: 40%
@@ -53,17 +55,17 @@ export function computeCongestionScore(
 
   // Vessel density in inner zone vs capacity
   // Weight: 25%
-  const densityScore = Math.min(1, commercial.length / maxCapacity) * 25;
+  const densityScore = Math.min(1, innerCommercial.length / maxCapacity) * 25;
 
   // Low-speed ratio in inner zone (slow/stopped = congested)
   // Weight: 20%
-  const slowVessels = innerVessels.filter(v => v.speed !== null && v.speed < 2).length;
-  const lowSpeedRatio = innerVessels.length > 0 ? slowVessels / innerVessels.length : 0;
+  const slowVessels = innerCommercial.filter(v => v.speed !== null && v.speed < 2).length;
+  const lowSpeedRatio = innerCommercial.length > 0 ? slowVessels / innerCommercial.length : 0;
   const lowSpeedScore = lowSpeedRatio * 20;
 
   // Inbound pressure: outer zone vessels heading toward port
   // Weight: 15%
-  const inboundCount = outerVessels.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone) === 'underway').length;
+  const inboundCount = outerCommercial.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone) === 'underway').length;
   const inboundPressure = Math.min(1, inboundCount / Math.max(1, maxCapacity * 0.5)) * 15;
 
   const rawScore = anchoredScore + densityScore + lowSpeedScore + inboundPressure;
