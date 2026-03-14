@@ -15,7 +15,7 @@ export const PORTS: PortConfig[] = [
     inner: { lat: [51.86, 51.98], lon: [3.95, 4.52] },   // Nieuwe Waterweg/Maasvlakte–Pernis
     outer: { lat: [51.78, 52.02], lon: [3.72, 4.72] },   // Approach + North Sea anchorages
     maxCapacity: capacities['Rotterdam'] ?? 80,
-    berthCapacity: berthCap['Rotterdam'] ?? 80,
+    berthCapacity: berthCap['Rotterdam'] ?? 145,
     utcOffset: 1,
   },
   {
@@ -34,7 +34,7 @@ export const PORTS: PortConfig[] = [
     inner: { lat: [33.71, 33.78], lon: [-118.32, -118.12] }, // San Pedro Bay (LA + LB)
     outer: { lat: [33.62, 33.85], lon: [-118.45, -118.02] }, // Approach + anchorage
     maxCapacity: capacities['Los Angeles'] ?? 70,
-    berthCapacity: berthCap['Los Angeles'] ?? 70,
+    berthCapacity: berthCap['Los Angeles'] ?? 80,
     utcOffset: -8,
   },
   {
@@ -44,7 +44,7 @@ export const PORTS: PortConfig[] = [
     inner: { lat: [53.50, 53.58], lon: [9.88, 10.05] },   // Elbe port area
     outer: { lat: [53.42, 53.63], lon: [9.72, 10.22] },   // Elbe approach + anchorages
     maxCapacity: capacities['Hamburg'] ?? 60,
-    berthCapacity: berthCap['Hamburg'] ?? 60,
+    berthCapacity: berthCap['Hamburg'] ?? 25,
     utcOffset: 1,
   },
   {
@@ -54,7 +54,7 @@ export const PORTS: PortConfig[] = [
     inner: { lat: [51.22, 51.32], lon: [4.28, 4.48] },   // Scheldt berths
     outer: { lat: [51.12, 51.42], lon: [4.12, 4.62] },   // Scheldt approach
     maxCapacity: capacities['Antwerp'] ?? 65,
-    berthCapacity: berthCap['Antwerp'] ?? 65,
+    berthCapacity: berthCap['Antwerp'] ?? 28,
     utcOffset: 1,
   },
 ];
