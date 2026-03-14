@@ -1,11 +1,14 @@
-import type { PortConfig } from './types';
+import type { PortConfig, PortZone } from './types';
 import portCapacities from './port-capacities.json';
 import berthCapacities from './berth-capacities.json';
+import berthZonesData from './berth-zones.json';
 
 // 5 highest-value ports — inner = berths/terminals, outer = approach/anchorage
 // maxCapacity from PORT_CAPACITY_SOURCES.md; berthCapacity from BERTH_UTILIZATION_METHODOLOGY.md
+// berthZones/anchorageZones from berth-zones.json — precise load/unload areas
 const capacities = portCapacities as Record<string, number>;
 const berthCap = berthCapacities as Record<string, number>;
+const berthZones = berthZonesData as unknown as Record<string, { berthZones?: PortZone[]; anchorageZones?: PortZone[] }>;
 
 export const PORTS: PortConfig[] = [
   {
@@ -16,6 +19,8 @@ export const PORTS: PortConfig[] = [
     outer: { lat: [51.78, 52.02], lon: [3.72, 4.72] },   // Approach + North Sea anchorages
     maxCapacity: capacities['Rotterdam'] ?? 80,
     berthCapacity: berthCap['Rotterdam'] ?? 145,
+    berthZones: berthZones['Rotterdam']?.berthZones,
+    anchorageZones: berthZones['Rotterdam']?.anchorageZones,
     utcOffset: 1,
   },
   {
@@ -25,6 +30,9 @@ export const PORTS: PortConfig[] = [
     inner: { lat: [1.22, 1.32], lon: [103.76, 104.02] }, // PSA terminals + Jurong
     outer: { lat: [1.08, 1.42], lon: [103.62, 104.18] }, // Eastern + Western anchorages
     maxCapacity: capacities['Singapore'] ?? 120,
+    berthCapacity: berthCap['Singapore'] ?? 56,
+    berthZones: berthZones['Singapore']?.berthZones,
+    anchorageZones: berthZones['Singapore']?.anchorageZones,
     utcOffset: 8,
   },
   {
@@ -35,6 +43,8 @@ export const PORTS: PortConfig[] = [
     outer: { lat: [33.62, 33.85], lon: [-118.45, -118.02] }, // Approach + anchorage
     maxCapacity: capacities['Los Angeles'] ?? 70,
     berthCapacity: berthCap['Los Angeles'] ?? 80,
+    berthZones: berthZones['Los Angeles']?.berthZones,
+    anchorageZones: berthZones['Los Angeles']?.anchorageZones,
     utcOffset: -8,
   },
   {
@@ -45,6 +55,8 @@ export const PORTS: PortConfig[] = [
     outer: { lat: [53.42, 53.63], lon: [9.72, 10.22] },   // Elbe approach + anchorages
     maxCapacity: capacities['Hamburg'] ?? 60,
     berthCapacity: berthCap['Hamburg'] ?? 25,
+    berthZones: berthZones['Hamburg']?.berthZones,
+    anchorageZones: berthZones['Hamburg']?.anchorageZones,
     utcOffset: 1,
   },
   {
@@ -55,6 +67,8 @@ export const PORTS: PortConfig[] = [
     outer: { lat: [51.12, 51.42], lon: [4.12, 4.62] },   // Scheldt approach
     maxCapacity: capacities['Antwerp'] ?? 65,
     berthCapacity: berthCap['Antwerp'] ?? 28,
+    berthZones: berthZones['Antwerp']?.berthZones,
+    anchorageZones: berthZones['Antwerp']?.anchorageZones,
     utcOffset: 1,
   },
 ];
@@ -71,6 +85,14 @@ export function inBox(
     lat >= zone.lat[0] && lat <= zone.lat[1] &&
     lon >= zone.lon[0] && lon <= zone.lon[1]
   );
+}
+
+/** Check if point is in any of the given zones */
+export function inAnyBox(
+  lat: number, lon: number,
+  zones: { lat: [number, number]; lon: [number, number] }[]
+): boolean {
+  return zones.some(z => inBox(lat, lon, z));
 }
 
 export function normalizeDestination(raw: string): string {

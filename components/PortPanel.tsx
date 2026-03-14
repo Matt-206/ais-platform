@@ -48,8 +48,12 @@ function ShipTypeBadge({ type }: { type: number | null }) {
   return <span className="text-xs text-slate-400">Other</span>;
 }
 
+const VALID_STATUSES = ['anchored', 'moored', 'underway', 'unknown'] as const;
+type NavStatus = (typeof VALID_STATUSES)[number];
+
 function VesselRow({ vessel }: { vessel: VesselRecord }) {
-  const status = classifyNavStatus(vessel.navStatus, vessel.speed, vessel.zone);
+  const raw = vessel.statusLabel ?? classifyNavStatus(vessel.navStatus, vessel.speed, vessel.zone, vessel.inBerthArea, vessel.inAnchorage);
+  const status: NavStatus = VALID_STATUSES.includes(raw as NavStatus) ? (raw as NavStatus) : 'unknown';
   return (
     <tr className="transition-colors"
         style={{ borderBottom: '1px solid rgba(51,65,85,0.4)' }}

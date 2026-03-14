@@ -15,6 +15,10 @@ export interface PortConfig {
   maxCapacity: number; // max expected vessels in inner zone
   /** Researched berth count for berth utilization (BOR) calculation */
   berthCapacity?: number;
+  /** Precise load/unload areas — vessel must be in berth zone to count as moored */
+  berthZones?: PortZone[];
+  /** Anchorage areas — vessels here count as anchored even if in inner zone */
+  anchorageZones?: PortZone[];
   /** Hours from UTC for port's local time (forecast time-of-day multiplier) */
   utcOffset?: number;
 }
@@ -30,7 +34,13 @@ export interface VesselRecord {
   lat: number;
   lon: number;
   zone: 'inner' | 'outer';
+  /** True when position is within a berth/terminal load-unload area */
+  inBerthArea?: boolean;
+  /** True when position is within a designated anchorage */
+  inAnchorage?: boolean;
   lastSeen: number; // unix ms
+  /** Classified status label (anchored/moored/underway/unknown) when provided by API */
+  statusLabel?: string;
 }
 
 /** Per-port data quality metrics for transparency and confidence scoring */

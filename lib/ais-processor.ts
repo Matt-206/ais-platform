@@ -1,5 +1,5 @@
 import type { AISMessage, VesselRecord } from './types';
-import { PORTS, inBox, normalizeDestination } from './ports-config';
+import { PORTS, inBox, inAnyBox, normalizeDestination } from './ports-config';
 import { computeCongestionScore, getCongestionLevel, getDDRate, classifyNavStatus } from './congestion';
 
 function isCommercial(shipType: number | null): boolean {
@@ -125,12 +125,15 @@ export class AISProcessor {
     for (const port of PORTS) {
       if (inBox(lat, lon, port.inner)) {
         vessel.zone = 'inner';
-        this.portVessels[port.name].set(mmsi, vessel);
+        vessel.inBerthArea = port.berthZones ? inAnyBox(lat, lon, port.berthZones) : undefined;
+        vessel.inAnchorage = port.anchorageZones ? inAnyBox(lat, lon, port.anchorageZones) : false;
+        this.portVessels[port.name].set(mmsi, { ...vessel });
       } else if (inBox(lat, lon, port.outer)) {
         vessel.zone = 'outer';
-        this.portVessels[port.name].set(mmsi, vessel);
+        vessel.inBerthArea = false;
+        vessel.inAnchorage = port.anchorageZones ? inAnyBox(lat, lon, port.anchorageZones) : false;
+        this.portVessels[port.name].set(mmsi, { ...vessel });
       } else {
-        // Remove from port if it was previously there
         this.portVessels[port.name].delete(mmsi);
       }
     }
@@ -160,14 +163,14 @@ export class AISProcessor {
       recordScore(port.name, score);
 
       // Metrics from commercial vessels only — matches relay and vessel list
-      const anchored = commercial.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone) === 'anchored').length;
-      const moored = commercial.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone) === 'moored').length;
-      const underway = commercial.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone) === 'underway').length;
-      const inbound = commercial.filter(v => v.zone === 'outer' && classifyNavStatus(v.navStatus, v.speed, v.zone) === 'underway').length;
+      const anchored = commercial.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone, v.inBerthArea, v.inAnchorage) === 'anchored').length;
+      const moored = commercial.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone, v.inBerthArea, v.inAnchorage) === 'moored').length;
+      const underway = commercial.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone, v.inBerthArea, v.inAnchorage) === 'underway').length;
+      const inbound = commercial.filter(v => v.zone === 'outer' && classifyNavStatus(v.navStatus, v.speed, v.zone, v.inBerthArea, v.inAnchorage) === 'underway').length;
       const other = commercial.length - anchored - moored - underway;
 
       const vesselList = commercial
-        .map(v => ({ ...v, statusLabel: classifyNavStatus(v.navStatus, v.speed, v.zone) }))
+        .map(v => ({ ...v, statusLabel: classifyNavStatus(v.navStatus, v.speed, v.zone, v.inBerthArea, v.inAnchorage) }))
         .sort((a, b) => b.lastSeen - a.lastSeen);
 
       return {
