@@ -27,7 +27,7 @@ export const PORTS: PortConfig[] = [
     name: 'Singapore',
     lat: 1.27, lon: 103.82,
     locode: ['SGSIN', 'SINGAPORE', 'SGP', 'SNGPORE'],
-    inner: { lat: [1.22, 1.32], lon: [103.76, 104.02] }, // PSA terminals + Jurong
+    inner: { lat: [1.22, 1.32], lon: [103.60, 104.02] }, // PSA terminals + Tuas + Jurong
     outer: { lat: [1.08, 1.42], lon: [103.62, 104.18] }, // Eastern + Western anchorages
     maxCapacity: capacities['Singapore'] ?? 120,
     berthCapacity: berthCap['Singapore'] ?? 56,
