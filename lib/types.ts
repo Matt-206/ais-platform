@@ -13,6 +13,8 @@ export interface PortConfig {
   inner: PortZone;
   outer: PortZone;
   maxCapacity: number; // max expected vessels in inner zone
+  /** Researched berth count for berth utilization (BOR) calculation */
+  berthCapacity?: number;
   /** Hours from UTC for port's local time (forecast time-of-day multiplier) */
   utcOffset?: number;
 }
@@ -49,6 +51,10 @@ export interface PortState {
   reliability?: 'high' | 'medium' | 'low';
   score: number;
   level: CongestionLevel;
+  /** Berth utilization % (industry BOR): moored / berthCapacity × 100. Sourced methodology in scripts/BERTH_UTILIZATION_METHODOLOGY.md */
+  berthUtilization?: number;
+  /** Researched berth count for utilization denominator */
+  berthCapacity?: number;
   ddRate: number;
   ddMultiplier: number;
   color: string;

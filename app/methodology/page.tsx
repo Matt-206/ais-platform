@@ -41,6 +41,26 @@ export default function MethodologyPage() {
           </div>
         </section>
 
+        <section id="berth">
+          <h2 className="flex items-center gap-2 text-xl font-semibold text-white mb-4">
+            <BarChart3 size={20} className="text-sky-400" />
+            Berth utilization (industry BOR)
+          </h2>
+          <div className="space-y-3 text-sm text-slate-300 leading-relaxed">
+            <p>
+              <strong className="text-slate-100">Berth utilization</strong> = (moored / berthCapacity) × 100%.
+              Industry-standard <strong className="text-slate-100">Berth Occupancy Ratio (BOR)</strong>.
+            </p>
+            <p>
+              <strong className="text-slate-100">Moored</strong> = commercial vessels in inner zone, speed &lt;0.5 kn or AIS Moored.
+              <strong className="text-slate-100"> Berth capacity</strong> = researched berth count (PSA Singapore 56, Rotterdam 80, etc.).
+            </p>
+            <p>
+              Thresholds: &lt;50% underutilized, 60–70% optimal, 70–80% busy, &gt;80% congested (Innovez-One, Portchain, GSTS).
+            </p>
+          </div>
+        </section>
+
         <section>
           <h2 className="flex items-center gap-2 text-xl font-semibold text-white mb-4">
             <BarChart3 size={20} className="text-sky-400" />

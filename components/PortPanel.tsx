@@ -6,7 +6,7 @@ import {
   AlertTriangle, RefreshCw, Signal, Navigation, ArrowDownToLine, HelpCircle,
 } from 'lucide-react';
 import type { PortState, VesselRecord } from '@/lib/types';
-import { classifyNavStatus } from '@/lib/congestion';
+import { classifyNavStatus, getBerthUtilizationPressure } from '@/lib/congestion';
 import MetricCard from './MetricCard';
 import ForecastChart from './ForecastChart';
 import DDContainerTable from './DDContainerTable';
@@ -197,6 +197,31 @@ export default function PortPanel({ portName, initialData, onClose }: PortPanelP
 
       {data && (
         <div className="p-4 flex flex-col gap-5">
+          {/* Berth Utilization (industry BOR) */}
+          {data.berthUtilization != null && (
+            <div className="rounded-xl p-4" style={{ background: 'rgba(15,23,42,0.95)', border: '1px solid #334155' }}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium uppercase tracking-wider" style={{ color: '#94a3b8' }}>Berth Utilization</span>
+                <a href="/methodology#berth" className="text-xs text-sky-400 hover:underline" title="Industry-standard BOR methodology">Proven</a>
+              </div>
+              <div className="flex items-end gap-2 mb-1">
+                <span className="text-4xl font-black" style={{ color: data.color }}>{data.berthUtilization}%</span>
+                {loading && (
+                  <RefreshCw size={13} className="text-slate-600 animate-spin mb-1.5 ml-1" />
+                )}
+              </div>
+              <p className="text-xs mb-2" style={{ color: '#64748b' }}>
+                {getBerthUtilizationPressure(data.berthUtilization)} · {data.moored} at berth / {data.berthCapacity ?? '—'} berths
+              </p>
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: '#1e293b' }}>
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{ width: `${Math.min(100, data.berthUtilization)}%`, backgroundColor: data.color }}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Congestion Score */}
           <div className="rounded-xl p-4" style={{ background: 'rgba(15,23,42,0.95)', border: '1px solid #334155' }}>
             <div className="flex items-center justify-between mb-2">

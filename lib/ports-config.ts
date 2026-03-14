@@ -1,7 +1,12 @@
 import type { PortConfig } from './types';
+import portCapacities from './port-capacities.json';
+import berthCapacities from './berth-capacities.json';
 
 // 5 highest-value ports — inner = berths/terminals, outer = approach/anchorage
-// Zones calibrated to published port boundaries and anchorage areas
+// maxCapacity from PORT_CAPACITY_SOURCES.md; berthCapacity from BERTH_UTILIZATION_METHODOLOGY.md
+const capacities = portCapacities as Record<string, number>;
+const berthCap = berthCapacities as Record<string, number>;
+
 export const PORTS: PortConfig[] = [
   {
     name: 'Rotterdam',
@@ -9,7 +14,8 @@ export const PORTS: PortConfig[] = [
     locode: ['NLRTM', 'ROTTERDAM', 'ROTTM', 'RTM', 'RTDM'],
     inner: { lat: [51.86, 51.98], lon: [3.95, 4.52] },   // Nieuwe Waterweg/Maasvlakte–Pernis
     outer: { lat: [51.78, 52.02], lon: [3.72, 4.72] },   // Approach + North Sea anchorages
-    maxCapacity: 80,
+    maxCapacity: capacities['Rotterdam'] ?? 80,
+    berthCapacity: berthCap['Rotterdam'] ?? 80,
     utcOffset: 1,
   },
   {
@@ -18,7 +24,7 @@ export const PORTS: PortConfig[] = [
     locode: ['SGSIN', 'SINGAPORE', 'SGP', 'SNGPORE'],
     inner: { lat: [1.22, 1.32], lon: [103.76, 104.02] }, // PSA terminals + Jurong
     outer: { lat: [1.08, 1.42], lon: [103.62, 104.18] }, // Eastern + Western anchorages
-    maxCapacity: 120,
+    maxCapacity: capacities['Singapore'] ?? 120,
     utcOffset: 8,
   },
   {
@@ -27,7 +33,8 @@ export const PORTS: PortConfig[] = [
     locode: ['USLAX', 'LOS ANGELES', 'LOSANGELES', 'LA', 'LONG BEACH', 'USLGB'],
     inner: { lat: [33.71, 33.78], lon: [-118.32, -118.12] }, // San Pedro Bay (LA + LB)
     outer: { lat: [33.62, 33.85], lon: [-118.45, -118.02] }, // Approach + anchorage
-    maxCapacity: 70,
+    maxCapacity: capacities['Los Angeles'] ?? 70,
+    berthCapacity: berthCap['Los Angeles'] ?? 70,
     utcOffset: -8,
   },
   {
@@ -36,7 +43,8 @@ export const PORTS: PortConfig[] = [
     locode: ['DEHAM', 'HAMBURG', 'HAMBG', 'HH'],
     inner: { lat: [53.50, 53.58], lon: [9.88, 10.05] },   // Elbe port area
     outer: { lat: [53.42, 53.63], lon: [9.72, 10.22] },   // Elbe approach + anchorages
-    maxCapacity: 60,
+    maxCapacity: capacities['Hamburg'] ?? 60,
+    berthCapacity: berthCap['Hamburg'] ?? 60,
     utcOffset: 1,
   },
   {
@@ -45,7 +53,8 @@ export const PORTS: PortConfig[] = [
     locode: ['BEANR', 'ANTWERP', 'ANTWRP', 'ANR'],
     inner: { lat: [51.22, 51.32], lon: [4.28, 4.48] },   // Scheldt berths
     outer: { lat: [51.12, 51.42], lon: [4.12, 4.62] },   // Scheldt approach
-    maxCapacity: 65,
+    maxCapacity: capacities['Antwerp'] ?? 65,
+    berthCapacity: berthCap['Antwerp'] ?? 65,
     utcOffset: 1,
   },
 ];

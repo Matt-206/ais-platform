@@ -11,11 +11,17 @@ export const maxDuration = 30;
 
 const RELAY_URL = process.env.RELAY_URL ?? '';
 
-function enrichPort(p: PortState): PortState {
+function enrichPort(p: PortState, berthCapacity?: number): PortState {
   const tradeLaneId = PORT_TRADE_LANE[p.name];
   const { rate, multiplier, level, color } = getDDRate(p.score, tradeLaneId);
+  const cap = berthCapacity ?? p.berthCapacity;
+  const berthUtilization = cap != null && cap > 0 && p.moored != null
+    ? Math.min(100, Math.round((p.moored / cap) * 100))
+    : p.berthUtilization;
   return {
     ...p,
+    berthUtilization,
+    berthCapacity: cap,
     ddRate:         rate,
     ddMultiplier:   multiplier,
     level:          getCongestionLevel(p.score),
@@ -51,7 +57,7 @@ export async function GET(
         // Use live data only when vessels or a score are present
         const hasData = (data.totalVessels ?? 0) > 0 || data.score > 0;
         if (hasData) {
-          return NextResponse.json(enrichPort(data));
+          return NextResponse.json(enrichPort(data, portConfig.berthCapacity));
         }
       }
     } catch {
@@ -93,6 +99,6 @@ export async function GET(
       inbound: portState.inbound ?? 0,
     },
     confidence: 'high', // snapshot has full data
-  } as PortState);
+  } as PortState, portConfig.berthCapacity);
   return NextResponse.json(enriched);
 }

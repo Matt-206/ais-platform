@@ -80,6 +80,16 @@ export function getCongestionLevel(score: number): CongestionLevel {
   return 'Critical';
 }
 
+/** Industry-standard berth utilization pressure (Innovez-One, Portchain, GSTS) */
+export type BerthPressure = 'Underutilized' | 'Optimal' | 'Busy' | 'Congested';
+
+export function getBerthUtilizationPressure(utilizationPct: number): BerthPressure {
+  if (utilizationPct < 50) return 'Underutilized';
+  if (utilizationPct < 70) return 'Optimal';
+  if (utilizationPct < 80) return 'Busy';
+  return 'Congested';
+}
+
 // ── Fix 1: Smooth piecewise-linear multiplier curve ─────────────────────────
 //
 // Replaces the 5-step ladder (which produced 50% rate jumps at score boundaries)
