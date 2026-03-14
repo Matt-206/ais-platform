@@ -49,7 +49,7 @@ function ShipTypeBadge({ type }: { type: number | null }) {
 }
 
 function VesselRow({ vessel }: { vessel: VesselRecord }) {
-  const status = classifyNavStatus(vessel.navStatus, vessel.speed);
+  const status = classifyNavStatus(vessel.navStatus, vessel.speed, vessel.zone);
   return (
     <tr className="transition-colors"
         style={{ borderBottom: '1px solid rgba(51,65,85,0.4)' }}

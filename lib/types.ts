@@ -13,6 +13,8 @@ export interface PortConfig {
   inner: PortZone;
   outer: PortZone;
   maxCapacity: number; // max expected vessels in inner zone
+  /** Hours from UTC for port's local time (forecast time-of-day multiplier) */
+  utcOffset?: number;
 }
 
 export interface VesselRecord {

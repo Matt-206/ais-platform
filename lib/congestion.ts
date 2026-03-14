@@ -11,14 +11,22 @@ function isCommercialVessel(shipType: number | null): boolean {
   return (shipType >= 70 && shipType <= 89);
 }
 
-export function classifyNavStatus(navStatus: number | null, speed: number | null): 'anchored' | 'moored' | 'underway' | 'unknown' {
-  if (navStatus === null) {
-    if (speed !== null && speed < 0.5) return 'moored';
-    return 'unknown';
+// Zone-aware: outer zone + stopped = anchored (waiting); inner zone + stopped = moored (at berth).
+// Many Class B reports omit NavigationalStatus — defaulting all low-speed to "moored" inflated counts.
+export function classifyNavStatus(
+  navStatus: number | null,
+  speed: number | null,
+  zone?: 'inner' | 'outer' | null
+): 'anchored' | 'moored' | 'underway' | 'unknown' {
+  if (navStatus !== null) {
+    if (ANCHORED_STATUSES.has(navStatus)) return 'anchored';
+    if (MOORED_STATUSES.has(navStatus)) return 'moored';
+    if (UNDERWAY_STATUSES.has(navStatus)) return 'underway';
   }
-  if (ANCHORED_STATUSES.has(navStatus)) return 'anchored';
-  if (MOORED_STATUSES.has(navStatus)) return 'moored';
-  if (UNDERWAY_STATUSES.has(navStatus)) return 'underway';
+  if (speed !== null && speed < 0.5) {
+    if (zone === 'inner') return 'moored';
+    if (zone === 'outer') return 'anchored';
+  }
   return 'unknown';
 }
 
@@ -34,9 +42,9 @@ export function computeCongestionScore(
   // Commercial vessels only for scoring
   const commercial = innerVessels.filter(v => isCommercialVessel(v.shipType));
 
-  const anchoredCount = vessels.filter(v => classifyNavStatus(v.navStatus, v.speed) === 'anchored').length;
-  const mooredCount = innerVessels.filter(v => classifyNavStatus(v.navStatus, v.speed) === 'moored').length;
-  const underwayInner = innerVessels.filter(v => classifyNavStatus(v.navStatus, v.speed) === 'underway').length;
+  const anchoredCount = vessels.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone) === 'anchored').length;
+  const mooredCount = innerVessels.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone) === 'moored').length;
+  const underwayInner = innerVessels.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone) === 'underway').length;
 
   // Anchored vessels (strongest signal — waiting outside port)
   // Weight: 40%
@@ -55,7 +63,7 @@ export function computeCongestionScore(
 
   // Inbound pressure: outer zone vessels heading toward port
   // Weight: 15%
-  const inboundCount = outerVessels.filter(v => classifyNavStatus(v.navStatus, v.speed) === 'underway').length;
+  const inboundCount = outerVessels.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone) === 'underway').length;
   const inboundPressure = Math.min(1, inboundCount / Math.max(1, maxCapacity * 0.5)) * 15;
 
   const rawScore = anchoredScore + densityScore + lowSpeedScore + inboundPressure;

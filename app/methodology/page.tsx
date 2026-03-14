@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function MethodologyPage() {
   return (
-    <div className="min-h-screen bg-[#0a0f1a] text-slate-200">
+    <div className="h-screen overflow-y-auto bg-[#0a0f1a] text-slate-200">
       <header className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700/50 px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center gap-4">
           <Link
@@ -57,7 +57,7 @@ export default function MethodologyPage() {
               <li><strong className="text-slate-200">Inbound pressure (15%)</strong> — vessels underway in outer zone approaching port</li>
             </ul>
             <p>
-              Nav status is inferred from AIS NavigationalStatus when available; otherwise speed &lt;0.5 kn is treated as moored.
+              Nav status is inferred from AIS NavigationalStatus when available; otherwise speed &lt;0.5 kn uses zone: inner = moored (at berth), outer = anchored (waiting).
               Saturation thresholds are calibrated so scores distribute meaningfully across typical port conditions.
             </p>
           </div>
@@ -104,8 +104,26 @@ export default function MethodologyPage() {
               <li><strong className="text-slate-200">Low</strong> — sparse coverage; interpret with caution</li>
             </ul>
             <p>
-              Data lineage (vessel counts, message count) is shown in the port panel. When AIS coverage is limited,
-              the 12-hour forecast uses mean reversion toward a neutral score (38) to avoid over-interpreting sparse data.
+              Data lineage (vessel counts, message count) is shown in the port panel.
+            </p>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="flex items-center gap-2 text-xl font-semibold text-white mb-4">
+            <BarChart3 size={20} className="text-sky-400" />
+            12-hour forecast
+          </h2>
+          <div className="space-y-3 text-sm text-slate-300 leading-relaxed">
+            <p>
+              The forecast blends <strong className="text-slate-100">60% same-hour average</strong> (from up to 7 days of
+              persisted history) with <strong className="text-slate-100">40% current score</strong>. A short-term
+              <strong className="text-slate-100"> trend</strong> (momentum from recent hours) nudges the forecast up or
+              down, fading over the 12-hour horizon. When no history exists, scores mean-revert toward a neutral level (38).
+            </p>
+            <p>
+              A <strong className="text-slate-100">port-specific time-of-day multiplier</strong> (1.08× during 06:00–20:00
+              local time, 0.88× at night) reflects that ports are typically busier during business hours in their time zone.
             </p>
           </div>
         </section>

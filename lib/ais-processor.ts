@@ -151,13 +151,13 @@ export class AISProcessor {
       const score = computeCongestionScore(vessels, port.maxCapacity);
       const level = getCongestionLevel(score);
       const { rate, multiplier, color } = getDDRate(score);
-      const fc = forecast12Hours(port.name, score);
+      const fc = forecast12Hours(port.name, score, port.utcOffset ?? 0);
       recordScore(port.name, score);
 
-      const anchored = vessels.filter(v => classifyNavStatus(v.navStatus, v.speed) === 'anchored').length;
-      const moored = vessels.filter(v => classifyNavStatus(v.navStatus, v.speed) === 'moored').length;
-      const underway = vessels.filter(v => classifyNavStatus(v.navStatus, v.speed) === 'underway').length;
-      const inbound = vessels.filter(v => v.zone === 'outer' && classifyNavStatus(v.navStatus, v.speed) === 'underway').length;
+      const anchored = vessels.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone) === 'anchored').length;
+      const moored = vessels.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone) === 'moored').length;
+      const underway = vessels.filter(v => classifyNavStatus(v.navStatus, v.speed, v.zone) === 'underway').length;
+      const inbound = vessels.filter(v => v.zone === 'outer' && classifyNavStatus(v.navStatus, v.speed, v.zone) === 'underway').length;
 
       return {
         name: port.name,
@@ -174,8 +174,7 @@ export class AISProcessor {
         inbound,
         totalVessels: vessels.length,
         vessels: vessels
-          .sort((a, b) => b.lastSeen - a.lastSeen)
-          .slice(0, 20),
+          .sort((a, b) => b.lastSeen - a.lastSeen),
         forecast: fc,
         lastUpdated: new Date().toISOString(),
       };

@@ -1,46 +1,52 @@
 import type { PortConfig } from './types';
 
-// 5 highest-value ports — concentrates sparse AISstream quota for better coverage
+// 5 highest-value ports — inner = port/berth area, outer = approach/anchorage
+// Zones tightened to avoid inflating counts with distant traffic (e.g. North Sea)
 export const PORTS: PortConfig[] = [
   {
     name: 'Rotterdam',
     lat: 51.95, lon: 4.25,
     locode: ['NLRTM', 'ROTTERDAM', 'ROTTM', 'RTM', 'RTDM'],
-    inner: { lat: [51.80, 52.10], lon: [3.90, 4.60] },
-    outer: { lat: [51.60, 52.30], lon: [3.50, 5.20] },
+    inner: { lat: [51.85, 52.02], lon: [4.10, 4.55] },
+    outer: { lat: [51.75, 52.15], lon: [3.75, 4.85] },
     maxCapacity: 80,
+    utcOffset: 1,
   },
   {
     name: 'Singapore',
     lat: 1.27, lon: 103.82,
     locode: ['SGSIN', 'SINGAPORE', 'SGP', 'SNGPORE'],
-    inner: { lat: [1.15, 1.45], lon: [103.65, 104.10] },
-    outer: { lat: [0.90, 1.70], lon: [103.45, 104.40] },
+    inner: { lat: [1.20, 1.38], lon: [103.72, 104.05] },
+    outer: { lat: [1.05, 1.55], lon: [103.55, 104.25] },
     maxCapacity: 120,
+    utcOffset: 8,
   },
   {
     name: 'Los Angeles',
     lat: 33.73, lon: -118.27,
     locode: ['USLAX', 'LOS ANGELES', 'LOSANGELES', 'LA', 'LONG BEACH', 'USLGB'],
-    inner: { lat: [33.50, 34.00], lon: [-118.80, -117.90] },
-    outer: { lat: [33.20, 34.30], lon: [-119.20, -117.50] },
+    inner: { lat: [33.65, 33.85], lon: [-118.45, -118.10] },
+    outer: { lat: [33.45, 34.00], lon: [-118.75, -117.85] },
     maxCapacity: 70,
+    utcOffset: -8,
   },
   {
     name: 'Hamburg',
     lat: 53.55, lon: 9.97,
     locode: ['DEHAM', 'HAMBURG', 'HAMBG', 'HH'],
-    inner: { lat: [53.45, 53.60], lon: [9.75, 10.15] },
-    outer: { lat: [53.20, 54.00], lon: [8.80, 11.00] },
+    inner: { lat: [53.48, 53.58], lon: [9.85, 10.08] },
+    outer: { lat: [53.38, 53.72], lon: [9.50, 10.55] },
     maxCapacity: 60,
+    utcOffset: 1,
   },
   {
     name: 'Antwerp',
     lat: 51.27, lon: 4.30,
     locode: ['BEANR', 'ANTWERP', 'ANTWRP', 'ANR'],
-    inner: { lat: [51.17, 51.37], lon: [4.22, 4.58] },
-    outer: { lat: [50.80, 51.80], lon: [3.30, 5.30] },
+    inner: { lat: [51.20, 51.35], lon: [4.25, 4.55] },
+    outer: { lat: [51.05, 51.55], lon: [3.85, 4.95] },
     maxCapacity: 65,
+    utcOffset: 1,
   },
 ];
 
