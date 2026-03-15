@@ -19,8 +19,9 @@ function enrichPort(p: PortState, berthCapacity?: number): PortState {
   const tradeLaneId = PORT_TRADE_LANE[p.name];
   const { rate, multiplier, level, color } = getDDRate(p.score, tradeLaneId);
   const cap = berthCapacity ?? p.berthCapacity;
-  const berthUtilization = cap != null && cap > 0 && p.moored != null
-    ? Math.min(100, Math.round((p.moored / cap) * 100))
+  const effectiveMoored = cap != null && p.moored != null ? Math.min(p.moored, cap) : p.moored;
+  const berthUtilization = cap != null && cap > 0 && effectiveMoored != null
+    ? Math.round((effectiveMoored / cap) * 100)
     : p.berthUtilization;
   return {
     ...p,

@@ -215,7 +215,7 @@ export default function PortPanel({ portName, initialData, onClose }: PortPanelP
                 )}
               </div>
               <p className="text-xs mb-2" style={{ color: '#64748b' }}>
-                {getBerthUtilizationPressure(data.berthUtilization)} · {data.moored} at berth / {data.berthCapacity ?? '—'} berths
+                {getBerthUtilizationPressure(data.berthUtilization)} · {data.berthCapacity != null && data.moored > data.berthCapacity ? `${data.berthCapacity} (capped)` : data.moored} at berth / {data.berthCapacity ?? '—'} berths
               </p>
               <div className="h-2 rounded-full overflow-hidden" style={{ background: '#1e293b' }}>
                 <div
